@@ -1,0 +1,116 @@
+---
+title: "Lectura de datos"
+author: "María Morales Bravo"
+date: "25/7/2021"
+output: pdf_document
+---
+
+```{r,include=F}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+load("r_parte1.RData")
+```
+
+```{r,echo=F}
+renisen<-readxl::read_excel("renisen.xlsx")
+#creo una copia donde realizar las modificaciones siempre dejando la base renisen intacta por si en cualquier momento tuvieramos que volver a comprobar sus datos
+renisen2<-renisen
+```
+
+```{r,echo=F,warning=F}
+#lo meto en una matriz de 3 columnas para que se presente como una tabla que visualmente quede bonita pero esto no sería necesario si no se va a exponer los resultados obtenidos.
+
+Tablas(matrix(names(renisen2),ncol = 3))
+```
+
+Nos encontramos ante una base de datos con 88 variables registradas las cuales antes de comenzar su tratamiento debemos de anonimizar eliminando la columna de iniciales del paciente y el número de enfermo ya que estas dos columnas realmente no nos aportan información a nuestro estudio y el eliminarlas lo convierte a nivel de protección de datos en mucho más segura. 
+
+Realizamos un estudio de datos faltantes antes de entrar en el tratamiento de cada variable: 
+
+```{r,echo=F,warning=F}
+#calculo los valores faltantes para cada campo
+faltantes<-apply(renisen2,2,function(x){sum(is.na(x))})
+
+#los pongo en 4 columnas para que se vean más bonitos en la tabla
+faltantes2<-matrix(cbind(names(faltantes),faltantes),ncol=2)
+faltantes2<-cbind(faltantes2[(1:(dim(faltantes2)[1]/2)), ],faltantes2[(((dim(faltantes2)[1]/2)+1):dim(faltantes2)[1]), ])
+
+#obtengo los valores faltantes de cada variable
+Tablas(faltantes2)
+```
+
+Gracias a esta comprobación nos damos cuenta de que hay 1686 registros donde solo se ha recogido el número del paciente y no el resto de variables, por tanto procedemos a eliminarlos por provenir de fallos en el registro o tener mucha información faltante. 
+
+```{r,echo=F,include=F,warning=F}
+#se realiza teniendo en cuenta dos variables para evitar quitar registros que hubieran obtenido solo un valor faltante y no lo que hemos explicado previamente. 
+sum(is.na(renisen2$pac_iniciales)&is.na(renisen2$pac_edad))
+
+renisen2<-renisen2[-c(which(is.na(renisen2$pac_iniciales)&is.na(renisen2$pac_edad))),]
+
+```
+
+
+Podemos volver a comprobar nuestros valores faltantes para ver si hemos solucionado lo expuesto previamente y vemos como para la mayoría de campos ya no existen NA. 
+
+
+Para comenzar, eliminamos las 3 primeras variables que son las iniciales, el ID del centro y el número de paciente para que nuestra bd sea totalmente anónima. 
+
+```{r,echo=F}
+renisen2<-renisen2[,-c(1:3)]
+```
+
+
+```{r,echo=F}
+save.image(file = "r_parte2.RData")
+```

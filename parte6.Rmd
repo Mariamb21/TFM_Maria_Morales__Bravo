@@ -1,0 +1,306 @@
+---
+title: "medicamentos"
+author: "María Morales Bravo"
+date: "25/7/2021"
+output: pdf_document
+---
+```{r}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+load("r_parte1.RData")
+load("r_parte2.RData")
+load("r_parte3.RData")
+load("r_parte4.RData")
+load("r_parte5.RData")
+```
+
+#  Medicamentos juntos en un grafico
+```{r,echo=F}
+medicamentos<-renisen2[,c(18:25)]
+medicamentos2<-data.frame(matrix(rep(0,dim(medicamentos)[1])*dim(medicamentos)[2],dim(medicamentos)[1],dim(medicamentos)[2]))
+
+for(i in 1:dim(medicamentos)[2]){
+  for(j in 1:dim(medicamentos)[1]){
+ if(as.character(medicamentos[j,i])=="1"){
+   medicamentos2[j,i]=0
+ }else{
+    medicamentos2[j,i]=1
+  }
+}}
+
+colnames(medicamentos2)<-colnames(medicamentos)
+
+dfmed<-apply(medicamentos2,2,sum)
+dfmed<-cbind(dfmed)
+dfmed<-data.frame(cbind(rownames(dfmed),dfmed))
+rownames(dfmed)=NULL
+colnames(dfmed)=c("medicamentos","valores")
+dfmed$valores<-as.numeric(dfmed$valores)
+dfmed$medicamentos<-substr(dfmed$medicamentos,7,nchar(dfmed$medicamentos))
+  
+ggplot(dfmed,aes(x=medicamentos,y=valores, fill="red"))+
+  geom_segment(aes(x = medicamentos, xend = medicamentos, y = 0, yend = valores),color = "gray", lwd = 1) +
+  geom_point(size = 4, pch = 21, colour="red")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45, vjust=0.5, size = 8), 
+        panel.grid.minor = element_blank())+ 
+  scale_y_continuous(limit = c(0,max(as.numeric(dfmed$valores))+1000))+
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5))+
+  ggtitle("Recuento de los diferentes grupos de medicamentos")+ 
+  labs(x = "",y = "")+
+  geom_hline(yintercept = 0,col="grey")
+```
+
+# 5.2.1 MEDICAMENTOS ESPECIFICOS 
+
+```{r,echo=F}
+medicina<-cbind(medicamentos2,as.numeric(renisen2$eim_muerte))
+colnames(medicina)[9]="Fallecimiento"
+
+
+j=1 
+p.valor2=c()
+for(i in 1:(dim(medicina)[2]-1)){
+  df<-data.frame(table(medicina[,i],medicina$Fallecimiento))
+  colnames(df)=c("Medicamento","Fallece","Recuento")
+  df$Medicamento<-factor(df$Medicamento,labels=c("No","Sí"))
+  #rownames(df)<-c("No","Sí")
+  
+  #barplot(table(medicina[,i],medicina$Fallecimiento))
+  
+  grafico<-ggplot(data=df, aes(x=Medicamento, y=as.numeric(Recuento),fill=colbidimension[factor(Fallece)])) + #reorder(nombres,-as.numeric(valores)) ordenados
+  geom_bar(stat="identity",position = "dodge")+
+  theme_minimal() + 
+  scale_y_continuous(limits=c(0,max(df$Recuento)+1000))+
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=c(colbidimension),
+labels = c("No fallece",
+"Fallece"))+
+  ggtitle(paste("Número de fallecidos que tomaban previamente", substr(names(medicina)[i],7,nchar(names(medicina)[i]))))+ 
+  labs(x = "",y = substr(names(medicina)[i],7,nchar(names(medicina)[i])))+
+  geom_hline(yintercept = 0,col="grey")+ guides(fill=guide_legend(title=""))
+  
+  print(grafico)
+  p.valor2[j]<-chisq.test(table(medicina[,i],medicina$Fallecimiento))[3]
+  print(colnames(medicina)[i])
+  print(chisq.test(table(medicina[,i],medicina$Fallecimiento)))
+  j=j+1
+}
+for (i in 1:8){
+  p.valor2[[i]][2]<-round(p.valor2[[i]][1],4)
+}
+
+p.valor3<-c()
+j=1
+for (i in 1:8){
+  p.valor3[j]<-p.valor2[[i]][2]
+  j=j+1
+}
+
+p.valor3<-matrix(p.valor3)
+p.valor3= cbind(matrix(names(medicina)[-9]),p.valor3)
+Tablas(p.valor3)
+
+```
+
+# TODAS LAS COMBINACIONES DE MEDICAMENTOS 2 a 2 
+
+```{r,echo=F,warning=F}
+#names(medicina[,-9])
+
+#dos a dos son 
+
+
+k=1
+p.valor2=c()
+#j=c(2:6) #c(2,3,4,5,6,3,4,5,6,4,5,6,5,6,6)
+nombres2=c()
+
+
+j2=1:(dim(medicina)[2]-3)
+j=1:(dim(medicina)[2]-3)
+
+for(i in 1:(dim(medicina)[2]-3)){
+  
+  #para que j varie de longitud
+  if(j==6){
+      j=j2[-c(1:i)]
+  }else{
+      j=j[-1]
+  }
+  
+  for(j in j){ #2:(dim(medicina)[2]-3)
+  print(paste("combinación de ",names(medicina)[i]," y",names(medicina)[j]))
+  med2<-apply(cbind(medicina[,i],medicina[,j]),1,sum)
+  med2[which(med2==1)]=0
+  med2[which(med2==2)]=1
+  df<-data.frame(table(med2,medicina$Fallecimiento))
+  colnames(df)=c("Medicamento","Fallece","Recuento")
+  df$Medicamento<-factor(df$Medicamento,labels=c("No","Sí"))
+  
+  grafico<-ggplot(data=df, aes(x=Medicamento, y=as.numeric(Recuento),fill=colbidimension[factor(Fallece)])) + #reorder(nombres,-as.numeric(valores)) ordenados
+  geom_bar(stat="identity",position = "dodge")+
+  theme_minimal() + 
+  scale_y_continuous(limits=c(0,max(df$Recuento)+1000))+
+  theme(plot.title = element_text(hjust = 0.5,size=8)) +
+  scale_fill_manual(values=c(colbidimension),
+labels = c("No fallece",
+"Fallece"))+
+  ggtitle(paste("Número de fallecidos que tomaban previamente", substr(names(medicina)[i],7,nchar(names(medicina)[i]))," y ",substr(names(medicina)[j],7,nchar(names(medicina)[j]))))+ 
+  labs(x = "",y = substr(names(medicina)[i],7,nchar(names(medicina)[i])))+
+  geom_hline(yintercept = 0,col="grey")+ guides(fill=guide_legend(title=""))
+  
+  print(grafico)
+  nombres2[k]<-paste(substr(names(medicina)[i],7,nchar(names(medicina)[i]))," y ",substr(names(medicina)[j],7,nchar(names(medicina)[j])))
+  p.valor2[k]<-chisq.test(table(med2,medicina$Fallecimiento))[3]
+  print(chisq.test(table(med2,medicina$Fallecimiento)))
+  k=k+1
+  }
+}
+
+
+
+for (i in 1:15){
+  p.valor2[[i]][2]<-round(p.valor2[[i]][1],4)
+}
+
+p.valor3<-c()
+j=1
+for (i in 1:15){
+  p.valor3[j]<-p.valor2[[i]][2]
+  j=j+1
+}
+
+p.valor3<-matrix(p.valor3)
+p.valor3= data.frame(nombres2,p.valor3)
+Tablas(p.valor3)
+
+```
+# TODAS LAS COMBINACIONES DE MEDICAMENTOS 3 a 3
+
+
+```{r,echo=F,warning=F}
+#library("gtools")
+a<-gtools::combinations(6,3,c(1:6))
+
+#names(medicina[,-9])
+
+
+k=1
+p.valor2=c()
+#j=c(2:6) #c(2,3,4,5,6,3,4,5,6,4,5,6,5,6,6)
+nombres3=c()
+
+
+for(n in 1:20){
+  i<-a[n,1]
+  j<-a[n,2]
+  q<-a[n,3]
+  print(paste("combinación de ",names(medicina)[i]," y",names(medicina)[j]))
+  med3<-apply(cbind(medicina[,i],medicina[,j],medicina[,q]),1,sum)
+  med3[which(med3==1)]=0
+  med3[which(med3==2)]=0
+  med3[which(med3==3)]=1
+  df<-data.frame(table(med3,medicina$Fallecimiento))
+  colnames(df)=c("Medicamento","Fallece","Recuento")
+  df$Medicamento<-factor(df$Medicamento,labels=c("No","Sí"))
+  
+  grafico<-ggplot(data=df, aes(x=Medicamento, y=as.numeric(Recuento),fill=colbidimension[factor(Fallece)])) + #reorder(nombres,-as.numeric(valores)) ordenados
+  geom_bar(stat="identity",position = "dodge")+
+  theme_minimal() + 
+  scale_y_continuous(limits=c(0,max(df$Recuento)+1000))+
+  theme(plot.title = element_text(hjust = 0.5,size=8)) +
+  scale_fill_manual(values=c(colbidimension),
+labels = c("No fallece",
+"Fallece"))+
+  ggtitle(paste("Número de fallecidos que tomaban previamente", substr(names(medicina)[i],7,nchar(names(medicina)[i])),", ",substr(names(medicina)[j],7,nchar(names(medicina)[j]))," y ",substr(names(medicina)[q],7,nchar(names(medicina)[q]))))+ 
+  labs(x = "",y = substr(names(medicina)[i],7,nchar(names(medicina)[i])))+
+  geom_hline(yintercept = 0,col="grey")+ guides(fill=guide_legend(title=""))
+  
+  print(grafico)
+  nombres3[k]<-paste(substr(names(medicina)[i],7,nchar(names(medicina)[i])),", ",substr(names(medicina)[j],7,nchar(names(medicina)[j]))," y ",substr(names(medicina)[q],7,nchar(names(medicina)[q])))
+  p.valor2[k]<-chisq.test(table(med3,medicina$Fallecimiento))[3]
+  print(nombres3[k])
+  print(chisq.test(table(med3,medicina$Fallecimiento)))
+  k=k+1
+}
+
+
+
+
+for (i in 1:20){
+  p.valor2[[i]][2]<-round(p.valor2[[i]][1],4)
+}
+
+p.valor3<-c()
+j=1
+for (i in 1:20){
+  p.valor3[j]<-p.valor2[[i]][2]
+  j=j+1
+}
+p.valor3<-matrix(p.valor3)
+p.valor3= data.frame(nombres3,p.valor3)
+Tablas(p.valor3)
+
+print("Son significativas las combinaciones: ")
+p.valor3$nombres3[p.valor3$p.valor3<0.051]
+```
+
+
+
+
+
+```{r,echo=F}
+save.image(file = "r_parte6.RData")
+```

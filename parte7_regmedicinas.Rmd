@@ -1,0 +1,357 @@
+---
+title: "regresión solo medicinas"
+author: "María Morales Bravo"
+date: "1/9/2021"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+#load("data_medicinas2.RData")
+load("r_parte1.RData")
+load("r_parte2.RData")
+load("r_parte3.RData")
+load("r_parte4.RData")
+load("r_parte5.RData")
+load("r_parte6.RData")
+```
+
+# Regresión logística 
+
+Creamos el conjunto de datos con el que trabajaremos solo con los medicamentos y la evolución en un primer modelo. 
+
+
+```{r,echo=F,include=F}
+#quitar 26 y 27 fecha y hora, diagnosticos 52 a 57, 81 y 82 fecha muerte, 84 centro
+bd<-renisen2[,-c(26:27,51:73,81,82,84,86)]
+
+bd2<-bd
+
+bd2<-bd2[,c(18:24,55)] 
+
+###########################
+#bd modelo 
+#bd2 modelo medicamentos
+##########################
+bd2$ant_tpAntiagregantes<-as.numeric(bd2$ant_tpAntiagregantes)
+bd2$ant_tpAnticoagulantes<-as.numeric(bd2$ant_tpAnticoagulantes)
+bd2$ant_tpEstatinas<-as.numeric(bd2$ant_tpEstatinas)
+bd2$ant_tpAntihipertensivos<-as.numeric(bd2$ant_tpAntihipertensivos)
+bd2$ant_tpAntidiabeticos<-as.numeric(bd2$ant_tpAntidiabeticos)
+bd2$ant_tpOtrosTratamientos<-as.numeric(bd2$ant_tpOtrosTratamientos)
+bd2$ant_tpNinguno<-as.numeric(bd2$ant_tpNinguno)
+bd2$eim_muerte<-as.numeric(bd2$eim_muerte)
+
+
+for(j in 1:dim(bd2)[2]){
+  bd2[which(bd2[,j]==1),j]=0
+  bd2[which(bd2[,j]==2),j]=1
+}
+
+bd2$eim_muerte<-factor(bd2$eim_muerte)
+#summary(bd2)
+```
+
+
+Creamos conjunto test y prueba: datos_train y datos_test, no tenemos que realizar modificaciones porque todas son variables medidas 0 o 1 
+
+```{r,echo=F}
+set.seed(123)
+
+# See the data strcuture 
+glimpse(bd2)
+
+datos_div <- initial_split(bd2, strata = "eim_muerte", prop = 0.8)
+
+datos_train <- training(datos_div)
+datos_test  <- testing(datos_div)
+
+#comparar porcentajes más o menos ajustados
+prop.table(table(datos_train$eim_muerte))
+prop.table(table(datos_test$eim_muerte))
+```
+
+
+Entrenar el modelo:
+
+```{r,echo=F}
+glm(eim_muerte ~ ., data = datos_train, family = "binomial")
+
+fitted_logistic_model<- logistic_reg() %>%
+        # Set the engine
+        set_engine("glm") %>%
+        # Set the mode
+        set_mode("classification") %>%
+        # Fit the model
+        fit(eim_muerte~., data = datos_train)
+tidy(fitted_logistic_model)
+
+modelo<-tidy(fitted_logistic_model) %>%
+  filter(p.value < 0.05)
+
+#poner modelo 
+modelo$estimate<-round(modelo$estimate,4)
+modelo$std.error<-round(modelo$std.error,4)
+modelo$statistic<-round(modelo$statistic,4)
+modelo 
+```
+
+Odds y medidas
+```{r, echo=F}
+#significativos odds
+odss<-tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+odss$estimate<-round(odss$estimate,4)
+
+# Class prediction
+pred_class <- predict(fitted_logistic_model,
+                      new_data = datos_test,
+                      type = "class")
+# Prediction Probabilities
+pred_proba <- predict(fitted_logistic_model,
+                      new_data = datos_test,
+                      type = "prob")
+
+pred_proba[1:5,]
+
+#resultados
+results <- datos_test %>%
+  select(eim_muerte) %>%
+  bind_cols(pred_class, pred_proba)
+
+results[1:5, ]
+
+#matriz de confusion
+conf_mat(results, truth = eim_muerte,
+         estimate = .pred_class)
+cm<-conf_mat(results, truth = eim_muerte,
+         estimate = .pred_class)
+cm<-cm[1]$table
+precision <- (cm[1,1] + cm[2,2]) / (cm[1,1] + cm[2,2] +cm[1,2] + cm[2,1])
+precision
+
+#accuracy
+accuracy(results, truth = eim_muerte,
+         estimate = .pred_class)
+#sensibilidad
+sens(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#especificidad
+spec(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#presición
+# precision(results, truth =  eim_muerte,
+#     estimate = .pred_class)
+
+f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class)
+#kappa
+kap(results, truth =  eim_muerte,
+    estimate = .pred_class)
+
+```
+
+
+Predicciones y matriz de confusión representada 
+
+```{r,echo=F}
+
+predicciones <- results$.pred_class
+
+matriz_confusion <- table(results$eim_muerte, predicciones,
+                          dnn = c("observaciones", "predicciones"))
+matriz_confusion
+
+mosaic(matriz_confusion, shade = T, colorize = T,
+       gp = gpar(fill = matrix(c(colbidimension,colbidimension[2],colbidimension[1]), 2, 2)))
+
+###########COMPROBANDO RESULTADO CORRECTO #####
+
+modelo_matriz<-glm(eim_muerte ~ ., data = datos_train, family = "binomial")
+
+pred1<- predict.glm(modelo_matriz,newdata = datos_test, type="response")
+ytest<-datos_test$eim_muerte
+result1<- table(ytest, floor(pred1+0.5))
+result1<-cbind(result1 ,c(0,0))
+##############
+
+error1<- sum(result1[1,2], result1[2,1])/sum(result1)
+error1
+
+
+#calculamos también la tasa de rror por validación cruzada 
+library(ROCR)
+pred = ROCR::prediction(pred1,ytest)
+perf <- performance(pred, "tpr", "fpr")
+plot(perf)
+```
+
+El porcentaje de falsos negativos es muy alto. Seleccionar otro threshold puede mejorar la exactitud del modelo.
+
+```{r,echo=F}
+predicciones <- ifelse(test = results$.pred_1 > 0.1, yes = 1, no = 0)
+
+matriz_confusion <- table(results$eim_muerte, predicciones,
+                          dnn = c("observaciones", "predicciones"))
+matriz_confusion
+
+mosaic(matriz_confusion, shade = T, colorize = T,
+       gp = gpar(fill = matrix(c(colbidimension,colbidimension[2],colbidimension[1]), 2, 2)))
+```
+
+
+Si calculamos el error usando cross validacion el error es: 
+```{r,echo=F}
+#resulta ser el mismo ya que se habian distribuido las observaciones mediante los eventos eim_meurte para que estuvieran igual distribuidas
+library(caret)
+folds <- createFolds(datos_train$eim_muerte, k = 10)
+
+datos_todo<-rbind(datos_test,datos_train)
+
+cvRegresionLogistica <- lapply(folds, function(x){
+  training_fold <- datos_todo[-x, ]
+  test_fold <- datos_todo[x, ]
+  clasificador <- glm(eim_muerte ~ ., family = binomial, data = training_fold )
+  y_pred <- predict(clasificador, type = 'response', newdata = test_fold)
+  y_pred <- ifelse(y_pred > 0.5, 1, 0)
+  y_pred <- factor(y_pred, levels = c("0", "1"), labels = c("No", "Sí"))
+  cm <- table(test_fold$eim_muerte, y_pred)
+  precision <- (cm[1,1] + cm[2,2]) / (cm[1,1] + cm[2,2] +cm[1,2] + cm[2,1])
+  return(precision)
+})
+precisionRegresionLogistica <- mean(as.numeric(cvRegresionLogistica))
+print("Por regresión logística:",1-precisionRegresionLogistica)
+
+
+
+# library(class)
+# cvkNN <- lapply(folds, function(x){
+#   training_fold <- datos_train
+#   test_fold <- datos_test
+#   cl=datos_train$eim_muerte
+#   clasificador <- knn(training_fold[, -8], 
+#                 test_fold[, -8], 
+#                 cl = cl, 
+#                 k = 10)
+#   #y_pred <- predict(clasificador, newdata = test_fold)
+#   cm <- table(test_fold$eim_muerte, y_pred)
+#   precision <- (cm[1,1] + cm[2,2]) / (cm[1,1] + cm[2,2] +cm[1,2] + cm[2,1])
+#   return(precision)
+# })
+# precisionkNN <- mean(as.numeric(cvkNN))
+# 
+
+
+```
+
+
+Aplicar algoritmo rose para tener en cuenta el desvalanceo de clases y ver si así mejoramos nuestras predicciones: 
+
+```{r,echo=F}
+recipe_rose<-recipe(
+                  formula = eim_muerte ~ .,
+                  data =  datos_train
+               ) %>%
+               themis::step_rose(eim_muerte)
+  
+fglm_fit <- 
+  logistic_reg() %>% 
+  set_engine("glm") 
+
+
+glmbin_rose_wflw <-  workflow() %>% 
+  add_model(fglm_fit) %>% 
+  add_recipe(recipe_rose)
+
+cv_folds <- vfold_cv(datos_train, strata = "eim_muerte", repeats = 5)
+
+summary(glmbin_rose_wflw)
+#doParallel::registerDoParallel()
+
+glmbin_rose_1=glmbin_rose_wflw%>%
+  fit_resamples(resamples=cv_folds,
+metrics = metric_set(roc_auc,yardstick::accuracy,sens,spec,kap),#,accuracy,sens, spec),
+control = control_resamples(save_pred = TRUE))
+
+# glmbin_rose_1= fit_resamples(glmbin_rose_wflw,
+# resamples = cv_folds,
+# metrics = metric_set(roc_auc),
+# control = control_resamples(save_pred = TRUE)
+# )
+# 
+# glmbin_rose_1
+# 
+# glmbin_rose_2= fit_resamples(glmbin_rose_wflw,
+# resamples = cv_folds,
+# metrics = metric_set(accuracy),
+# control = control_resamples(save_pred = TRUE)
+# )
+# 
+# glmbin_rose_2
+
+
+glmbin_rose<-rbind(collect_metrics(glmbin_rose_1))#,collect_metrics(glmbin_rose_2))
+glmbin_rose
+#1-as.numeric(glmbin_rose[2,3])
+# predict_prob<-glmbin_rose_2$.predictions
+# ROC <- roc(datos_train_prep$eim_muerte, predict_prob)
+# plot(ROC, col = "red")
+        
+
+```
+
+```{r,echo=F}
+save.image(file = "r_parte7medicinas.RData")
+```
+

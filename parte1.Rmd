@@ -1,0 +1,102 @@
+---
+title: "Definir librerias y funciones"
+author: "María Morales Bravo"
+date: "25/7/2021"
+output: pdf_document
+---
+```{r packages, include = FALSE, echo=F}
+librerias<-c("dplyr","knitr",  "ggplot2 ","ggrepel", "magrittr","readxl", "writexl","magrittr", "ggplot2",  "readr","kableExtra", "flextable","scales", "arsenal","tidyr","listdown", "plotly", "purrr","gridExtra","grid","lmtest","tidymodels","vcd", "e1071","doParallel", "mlbench","parsnip","recipes","tune", "pROC", "stats","themis", "workflows","randomForest","caret","rsample",  "recipes",  "FactoMineR","missMDA","factoextra", "enrichwith",
+  "pls",  "neuralnet",  "NeuralNetTools")
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+```
+
+```{r,echo=F}
+Tablas_anchas<-function(x){
+  x%>%
+    kable(booktabs = TRUE,format = "latex") %>%
+    kable_styling(
+    latex_options = c("striped", "condensed", "scale_down","HOLD_position"),
+    position = "center",
+    full_width = FALSE)
+}
+Tablas<-function(x){
+  x%>%
+    kable(booktabs = TRUE,format = "latex") %>%
+    kable_styling(
+    latex_options = c("striped", "condensed","HOLD_position"),
+    position = "center",
+    full_width = FALSE)
+}
+
+```
+
+
+```{r,echo=F}
+#####FORMATO: COLORES DEFINIDOS PARA MUERTOS Y NO MUERTOS#########
+colbidimension= c("#66C2A5","#E15759")  #61D04F
+
+#paleta usada el resto del trabajo para unificar formato 
+colores=c(palette("Tableau 10")[-c(3)],"#A0CBE8","#FFBE7D","#8CD17D","#B6992D","#499894","#79706E","D37295","#FABFD2","#B07AA1","#D4A6C8","#D7B5A6",palette("Set 2"))
+#gradientes<-c("#4E79A7","#a3cce9")
+#gradienteazul = colorRampPalette(gradientes, bias = 0.2, space = c("rgb", "Lab"), interpolate =c("linear", "spline")) 
+
+gradientes2<-c("#2f876c","#9bd4c2")
+gradiente=colorRampPalette(gradientes2, bias = 0.2, space = c("rgb", "Lab"), interpolate =c("linear", "spline")) 
+```
+
+```{r,echo=F}
+save.image(file = "r_parte1.RData")
+```
+

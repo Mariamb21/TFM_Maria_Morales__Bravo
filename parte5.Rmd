@@ -1,0 +1,589 @@
+---
+title: "Resumen estadístico"
+author: "María Morales Bravo"
+date: "25/7/2021"
+output: pdf_document
+---
+
+```{r}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+load("r_parte1.RData")
+load("r_parte2.RData")
+load("r_parte3.RData")
+load("r_parte4.RData")
+
+```
+
+# PARTE 5
+
+## TIPOS DE VARIABLES 
+
+Vemos las variables numericas y categoricas que tenemos en nuestro estudio y realizamos un análisis de los estadísticos básicos sobre ellas. 
+
+Pensar bien si se va a utilizar una variable tipo fecha para darle el tratamiento adecuado. 
+
+Variables numéricas: Edad(1), NIH al ingreso(31),Dias de ingreso en Unidad Ictus (45), Dias de ingreso en UCI (46), Dias de hospitalizacion (47), Escala NIH al alta (48), Indice de Barthel al alta hospitalaria(49), Escala NIH a las 24 horas(85)
+
+
+Variables categoricas: Sexo(2), Consumo alcohol(3), Tabaquismo(4), Hipertensión arterial(5), Diabetes mellitus, Displemia, Ictus previo, AIT, Infarto cerebral, Hemorragia cerebral, Ictus no especificado, Cardiopatia, Cardiopatia isquemica, Cardiopatia emboligena mayor, Opciones cardiopatia emboligena mayor, Cardiopatia emboligena menor, Antiagregantes, Anticoagulantes, Estatinas, Antihipertensivos, Antidiabeticos (orales o insulina), Otros tratamientos, Ninguno, Desconocido, Ictus al despertar, Inicio conocido de los sintomas, Escala de Rankin previa,ECG EC, EC Fibrilación auricular, EC Otras arritmias emboligenas, EC Bloqueo conducción, EC Hipertrofia VI, EC Isquemia / neocrosis miocardica aguda, EC Isquemia / neocrosis miocardica cronica, Tipo Examen definitivo, Resultado del examen definitivo, Hallazgos relacionados con el ictus actual, Estudio Vascular, Estudio TSA, Estudio Intracraneal, Escala de Rankin modificada al alta(50), Diagnostico
+Diagnostico Etiologico, Diagnostico Etiologico. Aterotrombotico, Diagnostico Etiologico. Cardioembolico, Diagnostico Etiologico. Otras causas infrecuentes, Diagnostico Etiologico. Indeterminado, Diagnostico Clinico/Topografico, Ictus Establecido, Hemorragia cerebral intraparenq. - Diagnostico Etiologico, Diagnostico Etiologico. Primaria, Diagnostico Etiologico. Secundaria, Hemorragia cerebral intraparenq. - Diagnostico Clinico/Topografico, Diagnostico Clinico/Topografico. Parenquimatosa, Parenquimatosa. Hemisferio cerebral, Hemorragia subaracnoidea, Infarto cerebral. Diagnostico Etiologico, IC. Diagnostico Etiologico. Aterotrombotico, IC. Diagnostico Etiologico. Cardioembolico, IC. Diagnostico Etiologico. Otras causas infrecuentes, IC. Diagnostico Etiologico. Indeterminado, Infarto cerebral. Clinico/Topografico, Trombosis venosa cerebral. Diagnostico Etiologico, Trombosis venosa cerebral. Clinico/Topografico, Tratamiento en fase aguda1, Tratamiento en fase aguda2, Complicaciones neurologicas1, Complicaciones neurologicas2, Complicaciones sistemicas1, Complicaciones sistemicas2, Muerte (80), Causa de la muerte (83)
+
+Otras: Fecha Inicio Ictus(26), Hora Inicio Ictus(27),Fecha del fallecimiento(81), Tiempo al fallecimiento (dias)(82),Centro
+
+
+```{r,echo=F,include=F}
+numericas<- c(1,31,45:49,85)
+otras<-c(26,27,81,82,84)
+categoricas<-c(2:25,28:30,32:44,50:80,83)
+
+```
+
+## ANALISIS DESCRIPTIVO 
+
+
+Variables numericas, tener especial cuidado en los valores perdidos tomados como 99 en algunos casos 9999 en otros: 
+
+```{r,echo=F}
+####VALORES PERDIDOS DE LAS VARIABLES NUMÉRICAS########!!
+
+#dividimos la población previamente a realizar los test en muertos y no
+tabla<-data.frame(matrix(,2,2))
+fabs<-table(renisen2$eim_muerte)
+frel<- paste( round(fabs/sum(fabs) *100,4), "%")
+tabla[1,]<-fabs
+tabla[2,]<-frel
+tabla<-t(tabla)
+colnames(tabla)=c("nº de pacientes","%")
+rownames(tabla)=names(table(renisen2$eim_muerte))
+Tablas(tabla)
+
+df<-data.frame(matrix(rep(0,dim(table(renisen2$eim_muerte))*2),ncol=2,nrow=dim(table(renisen2$eim_muerte))))
+df[,1]<-names(table(renisen2$eim_muerte))
+df[,2]<-as.numeric(table(renisen2$eim_muerte))
+colnames(df)<-c("nombres","valores")
+  
+grafico<-ggplot(data=df, aes(x=nombres, y=as.numeric(valores),fill=colbidimension)) +
+  geom_bar(stat="identity")+
+  theme_minimal() + 
+  scale_y_continuous(limit = c(0,max(as.numeric(df$valores))+1000))+
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=colbidimension)+
+  ggtitle("Número de fallecimientos")+ 
+  labs(x = "",y = "Fallecimientos")+
+  geom_hline(yintercept = 0,col="grey")
+  
+grafico
+
+df<-data.frame(matrix(rep(0,dim(fabs)*2),ncol=2,nrow=dim(fabs)))
+df[,1]<-paste(names(fabs),frel)
+df[,2]<-as.numeric(fabs)
+colnames(df)<-c("nombres","valores")
+
+df <- df %>% 
+  arrange(desc(nombres)) %>%
+  mutate(prop = valores / sum(df$valores) *100) %>%
+  mutate(ypos = cumsum(prop)- 0.5*prop )
+
+
+grafico2<-ggplot(df, aes(x="", y=prop, fill=colbidimension)) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) +
+  theme_minimal()+ 
+  theme(
+  #axis.title.x = element_blank(),
+  #axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  axis.text.x=element_blank(),
+  legend.position="none",
+  plot.title = element_text(hjust = 0.5)
+  ) +
+  ggtitle("% de fallecimientos")+
+  labs(x = "",y = "")+
+  geom_label_repel(data = df,
+                   aes(y = ypos, label = paste0(nombres)),
+                   size = 4.5, nudge_x = 1, show.legend = FALSE)+
+  scale_fill_manual(values=colbidimension)
+  
+
+grafico2
+
+#mostrar ambos graficos juntos
+
+
+
+#barplot(table(renisen2$eim_muerte),col=colbidimension)
+#pie(round(fabs/sum(fabs) *100,4),labels = paste(names(fabs),frel), col=colbidimension,main="Fallecimientos")
+
+muertos <- renisen2[renisen2$eim_muerte=="No fallece",]
+nomuertos<-renisen2[renisen2$eim_muerte=="Fallece",]
+
+```
+
+
+\newpage
+
+
+
+
+## ANÁLISIS DE VARIABLES 
+
+
+Vamos a ver la distribución de la variable principal Fallecimiento respecto al resto de variables
+
+```{r results='asis',echo=F} 
+#for( i in numericas){
+# print(summary(renisen2[,i]))
+#}
+resultados<-list()
+#menos edad, dias de hospitalizacion y escala barlet las demás se pueden tratar normal 
+print("Edad")
+nombresresumen<-names(summary(renisen2$pac_edad))
+
+tabla<-as.table(t(as.matrix(summary(renisen2$pac_edad[renisen2$pac_edad<9999]))))
+rownames(tabla)<-c("Edad")
+Tablas(tabla)
+
+#diferenciando en muertos y no muertos
+requisitos<-renisen2$pac_edad<9999
+a=aggregate(renisen2$pac_edad[requisitos], list(renisen2$eim_muerte[requisitos]), summary)
+a=as.table(as.matrix(round(a[,-1],4)))
+a=cbind(a,round(aggregate(renisen2$pac_edad[requisitos] , list(renisen2$eim_muerte[requisitos]), sd)[,2],4))
+colnames(a)=c(nombresresumen,"desviación")
+rownames(a)=c("No fallecidos", "Fallecidos")
+Tablas(a)
+
+#boxplot(renisen2$pac_edad[requisitos]~renisen2$eim_muerte[requisitos],xlab=c(),ylab=c(),col=colbidimension)
+grafico<-ggplot(na.omit(renisen2[requisitos,c("eim_muerte","pac_edad")]), aes(x=eim_muerte, y=pac_edad,fill=eim_muerte,na.rm=T)) + 
+  geom_boxplot(na.rm=T)+
+  labs(title="Muertes distribuidas por edad",x="Fallecimientos", y = "Edad")+ 
+  theme_minimal()+ 
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=colbidimension)
+grafico
+
+test=t.test(muertos$pac_edad[requisitos],nomuertos$pac_edad[requisitos])
+test
+````
+
+```{r results='asis',echo=F,warning=F}
+
+numericas2<-numericas[-c(1,5,7)]
+
+for(i in numericas2 ){
+  
+  print(names(renisen2[,i]),end="/n")
+  
+  requisitos<-(renisen2[,i]<99)
+  tabla<-as.table(t(as.matrix(summary(renisen2[,i][requisitos]))))
+  tabla<-cbind(tabla,desviación_típica=sd(renisen2[,i][requisitos]))
+  rownames(tabla)<-c(names(renisen2[,i]))
+  
+  print(Tablas(tabla))
+  
+  a=aggregate(renisen2[requisitos,i], list(renisen2$eim_muerte[requisitos]), summary)
+  a=as.table(as.matrix(round(a[,-1],4)))
+  a=cbind(a,round(aggregate(renisen2[requisitos,i] , list(renisen2$eim_muerte[requisitos]), sd)[,2],4))
+  colnames(a)=c(nombresresumen,"desviación")
+  rownames(a)=c("No fallecidos", "Fallecidos")
+  #print(colnames(renisen2[,i]))
+  
+  print(Tablas(a))
+  
+# boxplot(renisen2[requisitos,i][[1]]~renisen2$eim_muerte[requisitos],xlab=c(),ylab=c(),col=colbidimension,main=names(renisen2[,i]))
+  
+  
+df=renisen2[requisitos,c("eim_muerte",names(renisen2)[i])]
+df=na.omit(df)
+  
+grafico<-df%>%
+    rename(Fallecimientos=eim_muerte, Variable=names(renisen2)[i])%>%
+    ggplot(aes(x=Fallecimientos, y= Variable,fill=Fallecimientos,na.rm=T))+ 
+    geom_boxplot(na.rm=T)+
+    labs(title=paste("Muertes distribuidas por ", substr(names(renisen2)[i],5,nchar(names(renisen2)[i]))),x="Fallecimientos", y = substr(names(renisen2)[i],5,nchar(names(renisen2)[i])))+ 
+    theme_minimal()+ 
+    theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+    scale_fill_manual(values=colbidimension)
+  
+print(grafico)
+
+print(t.test(muertos[,i],nomuertos[,i]),end="\n")
+  
+}
+```
+
+
+```{r results='asis',echo=F,warning=F}
+######TRATAMIENTO ESPECIAL DE ALGUNAS VARIABLES HECHAS DE 1 EN 1########
+print("Dias de hospitalización")
+tabla<-as.table(t(as.matrix(summary(renisen2$eia_diasHospitalizacion))))
+rownames(tabla)<-c("Dias de hospitalización")
+Tablas(tabla)
+
+#diferenciando en muertos y no muertos
+
+a=aggregate(renisen2$eia_diasHospitalizacion, list(renisen2$eim_muerte), summary)
+a=as.table(as.matrix(round(a[,-1],4)))
+a=cbind(a,round(aggregate(renisen2$eia_diasHospitalizacion , list(renisen2$eim_muerte), sd)[,2],4))
+colnames(a)=c(nombresresumen,"desviación")
+rownames(a)=c("No fallecidos", "Fallecidos")
+Tablas(a)
+
+#boxplot(renisen2$eia_diasHospitalizacion~renisen2$eim_muerte,xlab=c(),ylab=c(),col=palette("Tableau 10"))
+grafico<-ggplot(na.omit(renisen2[requisitos,c("eim_muerte","eia_diasHospitalizacion")]), aes(x=eim_muerte, y=eia_diasHospitalizacion,fill=eim_muerte,na.rm=T)) + 
+  geom_boxplot(na.rm=T)+
+  labs(title="Muertes distribuidas por dias de hospitalización",x="Fallecimientos", y = "eia_diasHospitalizacion")+ 
+  theme_minimal()+ 
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=colbidimension)
+grafico
+
+t.test(muertos$eia_diasHospitalizacion,nomuertos$eia_diasHospitalizacion)
+
+print("Escala Barthel al alta")
+tabla<-as.table(t(as.matrix(summary(renisen2$eia_escalaBarthelAlta))))
+rownames(tabla)<-c("escala Barlet al alta")
+Tablas(tabla)
+
+#diferenciando en muertos y no muertos
+a=aggregate(renisen2$eia_escalaBarthelAlta, list(renisen2$eim_muerte), summary)
+a=as.table(as.matrix(round(a[,-1],4)))
+a=cbind(a,round(aggregate(renisen2$eia_escalaBarthelAlta , list(renisen2$eim_muerte), sd)[,2],4))
+colnames(a)=c(nombresresumen,"desviación")
+rownames(a)=c("No fallecidos", "Fallecidos")
+Tablas(a)
+
+#boxplot(renisen2$eia_escalaBarthelAlta~renisen2$eim_muerte,xlab=c(),ylab=c(),col=palette("Tableau 10"))
+grafico<-ggplot(na.omit(renisen2[requisitos,c("eim_muerte","eia_escalaBarthelAlta")]), aes(x=eim_muerte, y=eia_escalaBarthelAlta,fill=eim_muerte,na.rm=T)) + 
+  geom_boxplot(na.rm=T)+
+  labs(title="Muertes distribuidas por escala Barlet al alta",x="Fallecimientos", y = "eia_escalaBarthelAlta")+ 
+  theme_minimal()+ 
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=colbidimension)
+grafico
+
+t.test(muertos$eia_escalaBarthelAlta,nomuertos$eia_escalaBarthelAlta)
+```
+
+\newpage
+
+
+Categoricas (dar nombre a las categorias post este analisis previo): 
+
+
+```{r results='asis',echo=F,warning=F}
+print("tabla hospital",end="/n")
+print(as.table(as.matrix(table(renisen2$cen_nombre))))
+
+
+print("variables categoricas",end="/n")
+categoricas2<-categoricas[-which(categoricas==80)]
+
+k=1
+p_valores2=c()
+
+for(i in categoricas2){
+  
+  print(names(renisen2[,i]))
+  tabla<-as.table(as.matrix(table(renisen2[,i])))
+  porcentaje=c()
+  for(j in 1:dim(tabla)[1]){
+    porcentaje[j]=paste((round(tabla[j,1]/sum(tabla[,1]),4)*100)," %")
+  }
+  tabla<-cbind(tabla,porcentaje)
+  colnames(tabla)<-c(names(renisen2[,i]),"%")
+  
+  print(Tablas(tabla))
+  
+  #barplot(table(renisen2[,i]),col=colores)
+  df<-data.frame(matrix(rep(0,dim(table(renisen2[,i]))*2),ncol=2,nrow=dim(table(renisen2[,i]))))
+  df[,1]<-names(table(renisen2[,i]))
+  df[,2]<-as.numeric(table(renisen2[,i]))
+  colnames(df)<-c("nombres","valores")
+ 
+  #df2<-data.frame(matrix(rep(0,dim(table(renisen2[,i],renisen2$eim_muerte))*3),ncol=3,nrow=dim(table(renisen2[,i],renisen2$eim_muerte))))
+  #df2[,1]<-names(table(renisen2[,i],renisen2$eim_muerte))
+  #df2[,2]<-as.numeric(table(renisen2[,i],renisen2$eim_muerte))
+  #colnames(df)<-c("nombres","valores","Fallece")
+  #titulo, chicar eje x y 
+  
+  if(length(df$nombres)<5){
+  grafico<-ggplot(data=df, aes(x=reorder(nombres,-as.numeric(valores)), y=as.numeric(valores),fill=reorder(nombres,-as.numeric(valores)))) + #reorder(nombres,-as.numeric(valores)) ordenados
+  geom_bar(stat="identity")+
+  theme_minimal() + 
+  scale_y_continuous(limit = c(0,max(as.numeric(df$valores))+1000))+
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=gradiente(length(df$nombres)))+
+  ggtitle(paste("Distribución", substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i])))))+ 
+  labs(x = "",y = substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i]))))+
+  geom_hline(yintercept = 0,col="grey") 
+  
+  print(grafico)
+  
+  }else{
+  grafico<-ggplot(data=df, aes(x=reorder(nombres,-as.numeric(valores)), y=as.numeric(valores),fill=reorder(nombres,-as.numeric(valores)))) +
+  geom_bar(stat="identity")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45, vjust=0.5, size = 8), 
+        panel.grid.minor = element_blank())+ 
+  scale_y_continuous(limit = c(0,max(as.numeric(df$valores))+1000))+
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=gradiente(length(df$nombres)))+
+  ggtitle(paste("Distribución", substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i])))))+ 
+  labs(x = "",y = substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i]))))+
+  geom_hline(yintercept = 0,col="grey")
+  
+  print(grafico)
+  }
+  
+  tabla<-table(renisen2$eim_muerte,renisen2[,i][[1]])
+  #print(Tablas(tabla))
+  
+  df<-data.frame(tabla)
+  colnames(df)<-c("Fallece","nombres","valor")
+  
+  if(length(df$nombres)<5){
+  
+  tabla<-table(renisen2$eim_muerte,renisen2[,i][[1]])
+  print(Tablas(tabla))
+  
+  grafico<-ggplot(data=df, aes(x=nombres, y=as.numeric(valor),fill=colbidimension[factor(df$Fallece)])) + #reorder(nombres,-as.numeric(valores)) ordenados
+  geom_bar(stat="identity")+
+  theme_minimal() + 
+  scale_y_continuous(limit = c(0,max(as.numeric(df$valor))+1000))+
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=c(colbidimension))+
+  ggtitle(paste("Número de fallecidos por", substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i])))))+ 
+  labs(x = "",y = substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i]))))+
+  geom_hline(yintercept = 0,col="grey") 
+  
+  print(grafico)
+  }else{
+    
+  tabla<-table(renisen2$eim_muerte,renisen2[,i][[1]])
+  print(Tablas_anchas(tabla))
+  
+  grafico<-ggplot(data=df, aes(x=nombres, y=as.numeric(valor),fill=colbidimension[factor(df$Fallece)])) +
+  geom_bar(stat="identity")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45, vjust=0.5, size = 8), 
+        panel.grid.minor = element_blank())+ 
+  scale_y_continuous(limit = c(0,max(as.numeric(df$valor))+1000))+
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values=c(colbidimension))+
+  ggtitle(paste("Número de fallecidos por", substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i])))))+ 
+  labs(x = "",y = substr(colnames(renisen2[,i]),5,nchar(colnames(renisen2[,i]))))+
+  geom_hline(yintercept = 0,col="grey")
+  
+  print(grafico)
+  }
+  
+  print(chisq.test(tabla))
+  
+  p_valores2[k]=chisq.test(tabla)$p.value
+  k=k+1
+}
+
+# #Para analizar de qué manera se asocian ambas variables
+# 
+# #Tabla cruzada con porcentajes
+# tabla2 <- prop.table(tabla,2)*100 #Distribución condicionada por columnas
+# #Agregar las distribuciones marginales hace más fácil de leer la tabla
+# Total <- prop.table(margin.table(tabla,1))*100 #Filas
+# tabla2 <- cbind(tabla2, Total)
+# Total <- c(100,100,100)
+# tabla2 <- rbind(tabla2, Total)
+
+#test chi cuadrado se aplica a una tabla con muerto o no 
+
+tablapvalores2<- as.table(matrix(c(colnames(renisen2[,categoricas2]),round(p_valores2),4),ncol=2))
+colnames(tablapvalores2)<-c("Variables categoricas","p-valores")
+rownames(tablapvalores2)=rep("",dim(tablapvalores2)[1])
+Tablas(tablapvalores2[(1:(dim(tablapvalores2)[1]/2)),])
+Tablas(tablapvalores2[(((dim(tablapvalores2)[1]/2)+1):dim(tablapvalores2)[1])])
+```
+
+
+# ANEXOS: Tablas para los estadísticos 
+
+```{r,echo=F}
+numericas
+
+tabla1<-data.frame()
+k=1
+requisitos<-c(9999,99,99,99,140,99,9999,99)
+for(i in numericas){
+  nombre<-colnames(renisen2)[i]
+  tabla1<-rbind(tabla1,round(summary(renisen2[,i][renisen2[,i]<requisitos[k]]),4))
+  rownames(tabla1)[k]<-c(nombre)
+  k=k+1
+}
+colnames(tabla1)=c(names(summary(renisen2$pac_edad)))
+tabla1
+
+tabla2<-data.frame()
+k=1
+requisitos<-c(9999,99,99,99,140,99,9999,99)
+for(i in numericas){
+  nombre<-colnames(renisen2)[i]
+  tabla2<-rbind(tabla2,round(sd(renisen2[,i][renisen2[,i]<requisitos[k]]),4))
+  rownames(tabla2)[k]<-c(nombre)
+  k=k+1
+}
+colnames(tabla2)=c("Desviación típica")
+tabla2
+
+tabla=cbind(tabla1,tabla2)
+tabla
+```
+
+```{r}
+tabla2<-data.frame()
+k=1
+for (i in categoricas){
+  nombre<-colnames(renisen2)[i]
+  fabs<-table(renisen2[,i])
+  frel<- paste( round(fabs/sum(fabs) *100,4), "%")
+
+  tabla2[k,1]=nombre
+  tabla2[((k+1):(k+length(fabs)-1)),1]=rep("",length(fabs)-1)
+
+  tabla2[(k:(k+(length(fabs)-1))),2]=names(fabs)
+  tabla2[(k:(k+(length(fabs)-1))),3]=fabs
+  tabla2[(k:(k+(length(fabs)-1))),4]=frel
+  k=k+length(fabs)
+}
+
+colnames(tabla2)=c("Variables","Categorias","F.absoluta","F.relativa")
+
+tabla2 %>%
+kable(booktabs = TRUE,format = "latex",longtable=TRUE) %>%
+kable_styling(latex_options = c("striped", "scale_down","condensed"),
+repeat_header_text = "continuaci\\'on",
+repeat_header_continued="contin\\'ua en la siguiente p\\'agina",full_width = TRUE,font_size =6) %>%
+landscape()
+
+```
+
+
+
+
+# ANEXO 2. HOSPITALES
+
+
+```{r,echo=F}
+
+fabs<-table(renisen2$cen_nombre)
+frel<- paste( round(fabs/sum(fabs) *100,4), "%")
+tabla<-data.frame(matrix(,32,2))
+tabla[,1]<-fabs
+tabla[,2]<-frel
+colnames(tabla)=c("centro","%")
+rownames(tabla)=names(fabs)
+rownames(tabla)[2]="Centro Médico de Asturias"
+rownames(tabla)[9]="H. de Mataró"
+rownames(tabla)[16]="H. Nuestra Señora del Rosario. Madrid"
+rownames(tabla)[20]="H. Vall d'Hebrón "
+
+Tablas(tabla)
+
+```
+
+# ANEXO 3. DIAGNOSTICOS 
+
+
+```{r,echo=F}
+#diagnosticos<-renisen2[,c(51:73)]
+diagnosticos<-renisen2[,c(51:73)]
+valores<-c()
+nombres=c()
+k=0
+for(i in 1:dim(diagnosticos)[2]){
+  for(j in 1:dim(table(diagnosticos[,i]))){
+    nombres[k+j]<-names(table(diagnosticos[,i]))[j]
+    valores[k+j]<-table(diagnosticos[,i])[j]
+    
+  }
+  k=length(valores)
+  #j=j+length(nombres)
+}
+
+tabdiagnostico<-data.frame(cbind(nombres,valores))
+tabdiagnostico<-tabdiagnostico[-which(tabdiagnostico$nombres=="Desconocido"),]
+tabdiagnostico<-tabdiagnostico[order(-as.numeric(tabdiagnostico$valores)), ]
+diag<-tabdiagnostico[1:10,]
+diag[,2]<-as.numeric(diag[,2])
+
+ggplot(diag,aes(x=reorder(nombres,-valores),y=valores, fill="red"))+
+  geom_segment(aes(x = reorder(nombres,-valores), xend = reorder(nombres,-valores), y = 0, yend = valores),color = "gray", lwd = 1) +
+  geom_point(size = 4, pch = 21, colour="red")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 70, vjust=0.5, size = 8), 
+        panel.grid.minor = element_blank())+
+  theme(legend.position="none",plot.title = element_text(hjust = 0.5))+
+  ggtitle("Recuento de los diferentes diagnósticos")+ 
+  labs(x = "",y = "")+
+  geom_hline(yintercept = 0,col="grey")+ 
+  scale_y_continuous(limit = c(0,max(diag$valores)))
+```
+
+**********
+#HASTA AQUI EL ESTUDIO DESCRIPTIVO
+**********
+
+```{r,echo=F}
+save.image(file = "r_parte5.RData")
+```

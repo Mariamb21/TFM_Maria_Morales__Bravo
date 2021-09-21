@@ -1,0 +1,241 @@
+---
+title: "Categorización"
+author: "María Morales Bravo"
+date: "25/7/2021"
+output: pdf_document
+---
+
+```{r,include=F}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+load("r_parte1.RData")
+load("r_parte2.RData")
+load("r_parte3.RData")
+```
+
+
+#Categorizar variables
+
+Codificamos todas las variables con sus niveles. 
+
+```{r,echo=F}
+#Sexo
+renisen2$pac_sexo<-factor(renisen2$pac_sexo,labels = c("Varón","Mujer","Desconocido"))
+#Consumo alcohol
+renisen2$ant_consAlcohol<-factor(renisen2$ant_consAlcohol,labels=c("No","Moderado","Excesivo","Desconocido"))
+#Tabaquismo
+renisen2$ant_tabaquismo<-factor(renisen2$ant_tabaquismo,labels=c("No","Sí","Ex","Desconocido")) #nivel ex o no
+#Hipertensión arterial
+renisen2$ant_hipertArterial<-factor(renisen2$ant_hipertArterial,labels=c("No", "Sí con previo conocimiento","Sí conocida ingreso","Desconocido"))
+#Diabetes mellitus
+renisen2$ant_diabMellitus<-factor(renisen2$ant_diabMellitus,labels=c("No", "Sí con previo conocimiento","Sí conocida ingreso","Desconocido"))
+#Displemia
+renisen2$ant_dislipemia<-factor(renisen2$ant_dislipemia,labels=c("No", "Sí con previo conocimiento","Sí conocida ingreso","Desconocido"))
+#Ictus previo
+renisen2$ant_ictusPrevio<-factor(renisen2$ant_ictusPrevio,labels=c("No","Sí","Desconocido"))
+#AIT
+renisen2$ant_ipAit<-factor(renisen2$ant_ipAit,labels=c("No","Sí"))
+#Infarto cerebral
+renisen2$ant_ipInfCerebral<-factor(renisen2$ant_ipInfCerebral,labels=c("No","Sí"))
+#Hemorragia cerebral
+renisen2$ant_ipHemCerebral<-factor(renisen2$ant_ipHemCerebral,labels=c("No","Sí"))
+#Ictus no especificado
+renisen2$ant_ipNoEspecif<-factor(renisen2$ant_ipNoEspecif,labels=c("No","Sí"))
+#Cardiopatia
+renisen2$ant_cardiopatia<-factor(renisen2$ant_cardiopatia,labels=c("No","Sí","Desconocido"))
+#Cardiopatia isquemica
+renisen2$ant_cardCardIsquemica<-factor(renisen2$ant_cardCardIsquemica,labels=c("No","Angor","IAM <=4 semanas","IAM >4 semanas","Desconocido"))
+#Cardiopatia emboligena mayor
+renisen2$ant_cardEmbMayor<-factor(renisen2$ant_cardEmbMayor,labels=c("No","Sí","Desconocido"))
+#Opciones cardiopatia emboligena mayor
+renisen2$ant_opCardEmbMayor<-factor(renisen2$ant_opCardEmbMayor,labels=c("Fibrilación auricular","Otros"))
+#Cardiopatia emboligena menor
+renisen2$ant_cardEmbMenor<-factor(renisen2$ant_cardEmbMenor,labels=c("No","Sí","Desconocido"))
+#Antiagregantes
+renisen2$ant_tpAntiagregantes<-factor(renisen2$ant_tpAntiagregantes,labels=c("No","Sí"))
+#Anticoagulantes
+renisen2$ant_tpAnticoagulantes<-factor(renisen2$ant_tpAnticoagulantes,labels=c("No","Sí"))
+#Estatinas
+renisen2$ant_tpEstatinas<-factor(renisen2$ant_tpEstatinas,labels=c("No","Sí"))
+#Antihipertensivos
+renisen2$ant_tpAntihipertensivos<-factor(renisen2$ant_tpAntihipertensivos,labels=c("No","Sí"))
+#Antidiabeticos (orales o insulina)
+renisen2$ant_tpAntidiabeticos<-factor(renisen2$ant_tpAntidiabeticos,labels=c("No","Sí"))
+#Otros tratamientos
+renisen2$ant_tpOtrosTratamientos<-factor(renisen2$ant_tpOtrosTratamientos,labels=c("No","Sí"))
+# Ninguno
+renisen2$ant_tpNinguno<-factor(renisen2$ant_tpNinguno,labels=c("No","Sí"))
+#Desconocido
+renisen2$ant_tpDesconocido<-factor(renisen2$ant_tpDesconocido,labels=c("No","Sí"))
+#Ictus al despertar
+renisen2$ict_ictDespertar<-factor(renisen2$ict_ictDespertar,labels=c("No","Sí"))
+#Inicio conocido de los sintomas
+renisen2$ict_inicioConSintomas<-factor(renisen2$ict_inicioConSintomas,labels=c("No","Sí"))
+
+#Escala de Rankin previa
+##ERRORES VALORES 70,80,90,100
+renisen2$ict_escalaRankin[renisen2$ict_escalaRankin>6]=99
+renisen2$ict_escalaRankin<-factor(renisen2$ict_escalaRankin,labels=c("Asintomático","Incapacidad no significativa","Incapacidad ligera","Incapacida moderada","Incapacidad moderada severa","Incapacidad severa","Muerte","Desconocido"))
+
+#ECG EC
+renisen2$exc_ecg<-factor(renisen2$exc_ecg,labels=c("Normal","Anormal","No evaluado"))
+#EC Fibrilacion auricular
+renisen2$exc_fibrilacionAuric<-factor(renisen2$exc_fibrilacionAuric,labels=c("No","Sí"))
+#EC Otras arritmias emboligenas
+renisen2$exc_otrasArritm<-factor(renisen2$exc_otrasArritm,labels=c("No","Sí"))
+#EC Bloqueo conduccion
+renisen2$exc_bloqConduccion<-factor(renisen2$exc_bloqConduccion,labels=c("No","Sí"))
+#EC Hipertrofia VI
+renisen2$exc_HipertrofiaVI<-factor(renisen2$exc_HipertrofiaVI,labels=c("No","Sí"))
+#EC Isquemia / neocrosis miocardica aguda
+renisen2$exc_IsquemiaNeocMiocardAguda<-factor(renisen2$exc_IsquemiaNeocMiocardAguda,labels=c("No","Sí"))
+#EC Isquemia / neocrosis miocardica cronica
+renisen2$exc_IsquemiaNeocMiocardCronica<-factor(renisen2$exc_IsquemiaNeocMiocardCronica,labels=c("No","Sí"))
+#Tipo Examen definitivo
+renisen2$ned_opExDefinitivo<-factor(renisen2$ned_opExDefinitivo,labels=c("Desconocido","TC-simple","RM-C multimodal","TC ultimodal","Ninguno"))
+#Resultado del examen definitivo
+renisen2$ned_resExamDef<-factor(renisen2$ned_resExamDef,labels=c("Normal","Patológico","No realizado"))
+#Hallazgos relacionados con el ictus actual
+renisen2$ned_hallazRelIctAct<-factor(renisen2$ned_hallazRelIctAct,labels=c("No","Infarto territorial","Infarto lacunar","Infarto de territorio frontera","Hemorragia intraparenquimatosa","Hemorragia intraventricular","Hemorragia subaracnoidea","Desconocido"))
+#Estudio Vascular
+renisen2$nne_estudioVascular<-factor(renisen2$nne_estudioVascular,labels=c("Ultrasonografia","Angio-RM","Angio-TC","ASD","No definido","No realizado"))
+#Estudio TSA
+renisen2$nne_neuUrEstudioTSA<-factor(renisen2$nne_neuUrEstudioTSA,labels=c("No","Sí"))
+#Estudio Intracraneal
+renisen2$nne_neuUrEstudioIntracraneal<-factor(renisen2$nne_neuUrEstudioIntracraneal,labels=c("No","Sí"))
+#Diagnostico
+renisen2$idn_diagnosticoClinico<-factor(renisen2$idn_diagnosticoClinico,labels=c("Ataque isquémico transitorio","Ictus establecido","Ictus no especificado"))
+#Diagnostico Etiologico
+renisen2$idn_diagEtiologicoAI<-factor(renisen2$idn_diagEtiologicoAI,labels=c("Aterotrombotico o Aterosclerosis de gran vaso","Cardioembolico","Lacunar o enfemedad de pequeño vaso","Otras causas infrecuentes","Indeterminado","Desconocido"))
+#Diagnostico Etiologico. Aterotrombotico
+renisen2$idn_diagEtiolAIAterotrombotico<-factor(renisen2$idn_diagEtiolAIAterotrombotico,labels=c("Probable estenosis > 50 %","Posible estenosis <= 50 %","Desconocido"))
+#Diagnostico Etiologico. Cardioembolico
+renisen2$idn_diagEtiolAICardioembolico<-factor(renisen2$idn_diagEtiolAICardioembolico,labels=c("Probable","Posible","Desconocido"))
+#Diagnostico Etiologico. Otras causas infrecuentes
+renisen2$idn_diagEtiolAIOtrasCausasInfrec<-factor(renisen2$idn_diagEtiolAIOtrasCausasInfrec,labels=c("Disección","Otras","Desconocido"))
+#Diagnostico Etiologico. Indeterminado
+renisen2$idn_diagEtiolAIIndeterminado<-factor(renisen2$idn_diagEtiolAIIndeterminado,labels=c("Criptogénico","Por dos causas coexistentes","Por estudio insuficiente","Desconocido"))
+#Diagnostico Clinico/Topografico
+renisen2$idn_diagClinicoTopografAI<-factor(renisen2$idn_diagClinicoTopografAI,labels=c("Carotideo","Vertebrovasilar","Ambos","Localización indeterminada","Posible AIT","Desconocido"))
+#Ictus Establecido
+renisen2$idn_ictusEstablecido<-factor(renisen2$idn_ictusEstablecido,labels=c("Hemorragia cerebral intraparenquimatosa","Hemorraguia subaracnoidea","Infarto cerebral","Trombosis venosa cerebral","Item sin aplicar (outlier)"))
+#Hemorragia cerebral intraparenq. - Diagnostico Etiologico
+renisen2$idn_diagEtiologicoHemCerIntrap<-factor(renisen2$idn_diagEtiologicoHemCerIntrap,labels=c("Primaria","Secundaria","Idiopática","Desconocido"))
+#Diagnostico Etiologico. Primaria
+renisen2$idn_diagEtiolHemCerIntrapPrimaria<-factor(renisen2$idn_diagEtiolHemCerIntrapPrimaria,labels=c("HTA","Amiloide","Desconocido"))
+#Diagnostico Etiologico. Secundaria
+renisen2$idn_diagEtiolHemCerIntrapSecundaria<-factor(renisen2$idn_diagEtiolHemCerIntrapSecundaria,labels=c("Anticoagulante/Trombólicos","Malformación vascular","Coagulopatía","Tumoral intracraneal","Otros","Desconocido"))
+#Hemorragia cerebral intraparenq. - Diagnostico Clinico/Topografico
+renisen2$idn_diagClinicoTopografHemCerIntrap<-factor(renisen2$idn_diagClinicoTopografHemCerIntrap,labels=c("Parenquimatosa","Intraventricular","Desconocido"))
+#Diagnostico Clinico/Topografico. Parenquimatosa
+renisen2$idn_diagCTHemCerIntrapParenquim<-factor(renisen2$idn_diagCTHemCerIntrapParenquim,labels=c("Hemisferio cerebral","Troncoencefálica","Cerebelosa","Desconocido"),levels=c(1,2,3,99))
+
+##### cambiar nombre de nd
+#Parenquimatosa. Hemisferio cerebral
+renisen2$idn_diagCTHCIParenqHemisfCerebral<-factor(renisen2$idn_diagCTHCIParenqHemisfCerebral,labels=c("Lobular","Profunda","nd","Desconocido")) 
+
+############
+
+#Hemorragia subaracnoidea
+renisen2$idn_diagEtiologicoHemSubaracnoidea<-factor(renisen2$idn_diagEtiologicoHemSubaracnoidea,labels=c("Aneurismática","Perimesenfálica","Traumática","Disección arterial","Neoplasia","Otras","Criptogénica","Desconocido"),levels=c(1:7,99))
+# Infarto cerebral. Diagnostico Etiologico
+renisen2$idn_diagEtiologicoInfartoCerebral<-factor(renisen2$idn_diagEtiologicoInfartoCerebral,labels=c("Aterotrombótico o Aterosclerosis","Cardioembólico","Lacunar o enfermedad de pequeño vaso","Otras causas infrecuentes","Indeterminado","Desconocido"))
+# IC. Diagnostico Etiologico. Aterotrombotico
+renisen2$idn_diagEtiolICAterotrombotico<-factor(renisen2$idn_diagEtiolICAterotrombotico,labels=c("Probable estenosis > 50 %","Posible estenosis <= 50 %","Desconocido"))
+# IC. Diagnostico Etiologico. Cardioembolico
+renisen2$idn_diagEtiolICCardioembolico<-factor(renisen2$idn_diagEtiolICCardioembolico,labels=c("Probable","Posible","Desconocido"))
+# IC. Diagnostico Etiologico. Otras causas infrecuentes
+renisen2$idn_diagEtiolICOtrasCausasInfrec<-factor(renisen2$idn_diagEtiolICOtrasCausasInfrec,labels=c("Disección","Otras","Desconocido"))
+# IC. Diagnostico Etiologico. Indeterminado
+renisen2$idn_diagEtiolICIndeterminado<-factor(renisen2$idn_diagEtiolICIndeterminado,labels=c("Criptogénico","Por dos causas coexistentes","Por estudio insuficiente","Desconocido"))
+# Infarto cerebral. Clinico/Topografico
+renisen2$idn_diagClinicoTopografIC<-factor(renisen2$idn_diagClinicoTopografIC,labels=c("PACI","TACI","POCI","LACI","Desconocido"))
+# Trombosis venosa cerebral. Diagnostico Etiologico
+renisen2$idn_diagEtiologicoTVC<-factor(renisen2$idn_diagEtiologicoTVC,labels=c("Trombofilia congenita","Trombofilia adquirida no neoplásica","Neoplasia","Tratamiento hormonal","Otros","Idiopática","Desconocido"))
+# Trombosis venosa cerebral. Clinico/Topografico
+renisen2$idn_diagClinicoTopografTVC<-factor(renisen2$idn_diagClinicoTopografTVC,labels=c("Seno longitudinal superior","Seno transverso","Seno recto","Seno cavernoso","Sistema venoso profundo","Vena cortical","Desconocido"),levels=c(1:6,99))
+# Tratamiento en fase aguda1
+renisen2$eii_tratFaseAguda<-factor(renisen2$eii_tratFaseAguda,labels=c("Trombólisis sistémica","Intervencionismo neuromuscular","Ensayo clínico","Antiagregación","Anticoagulación","craniectomía descompresiva","Evacuación del hematoma","Drenaje","Reversión de la anticoagulación","No"))
+# Tratamiento en fase aguda2
+renisen2$eii_tratFaseAguda2<-factor(renisen2$eii_tratFaseAguda2,labels=c("Trombólisis sistémica","Intervencionismo neuromuscular","Ensayo clínico","Antiagregación","Anticoagulación","craniectomía descompresiva","Evacuación del hematoma","Drenaje","Reversión de la anticoagulación","No"))
+# Complicaciones neurologicas1
+renisen2$eii_complicNeurologicas<-factor(renisen2$eii_complicNeurologicas,labels=c("Transformación hemorrágca sintomática","Eema ocupante de espacio con hipertensión endocraneal","Recurrencia precoz","Re-oclusión","Crisis comicial","Deterioro neurológico sin causa","Hidrocefalia","Vasoespasmo arterial","Resangrado","Otras","No"))
+# Complicaciones neurologicas2
+renisen2$eii_complicNeurologicas2<-factor(renisen2$eii_complicNeurologicas2,labels=c("Transformación hemorrágca sintomática","Eema ocupante de espacio con hipertensión endocraneal","Recurrencia precoz","Re-oclusión","Crisis comicial","Deterioro neurológico sin causa","Hidrocefalia","Vasoespasmo arterial","Resangrado","Otras","No"))
+# Complicaciones sistÃ©micas1
+renisen2$eii_complicSistemicas<-factor(renisen2$eii_complicSistemicas,labels=c("Neumonía","Infección respiratoria","Hipoventilación/broncoespasmos","Infección urinaria","Otras complicaciones infecciosas","Eap, insuficiencia cardiaca","Síndrome coronario agudo","TEP","TVP","Hemorragia digestiva","Otras","No"))
+# Complicaciones sistÃ©micas2
+renisen2$eii_complicSistemicas2<-factor(renisen2$eii_complicSistemicas2,labels=c("Neumonía","Infección respiratoria","Hipoventilación/broncoespasmos","Infección urinaria","Otras complicaciones infecciosas","Eap, insuficiencia cardiaca","Síndrome coronario agudo","TEP","TVP","Hemorragia digestiva","Otras","No"))
+
+#####TRATO ESPECIAL
+
+# Muerte
+#eliminamos los que no sabemos nuestra variable objetivo 
+renisen2<-renisen2[-c(which(renisen2$eim_muerte==99)),]
+
+renisen2$eim_muerte<-factor(renisen2$eim_muerte,labels=c("No fallece","Fallece")) #no se aplica desconocido ya que está eliminado
+####
+
+# Causa de la muerte
+renisen2$eim_causaMuerte<-factor(renisen2$eim_causaMuerte,labels=c("Relacionada con el ictus","Síndrome coronario agudo","Otras causas cardiovasculares","Infecciosa no pulmonar","Neumonia/infección respiratoria","TEP","Hemoragia digestiva","Otras","Desconocida"))
+
+
+
+
+#######HASTA AQUI QUEDA LA BASE DE DATOS ANONIMIZADA Y CON LAS VARIABLES CARACTERIZADAS#######
+```
+
+```{r,echo=F}
+save.image(file = "r_parte4.RData")
+```

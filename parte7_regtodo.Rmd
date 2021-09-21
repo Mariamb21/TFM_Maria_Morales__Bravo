@@ -1,0 +1,422 @@
+---
+title: "regresion todo"
+author: "María Morales Bravo"
+date: "1/9/2021"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+#load("data_medicinas2.RData")
+load("r_parte1.RData")
+load("r_parte2.RData")
+load("r_parte3.RData")
+load("r_parte4.RData")
+load("r_parte5.RData")
+load("r_parte6.RData")
+load("r_parte7medicinas.RData")
+```
+
+# Regresión logística 
+
+Creamos el conjunto de datos con el que trabajaremos solo con los medicamentos y la evolución en un primer modelo. 
+
+
+```{r,echo=F,include=F}
+#quitar 26 y 27 fecha y hora, diagnosticos 52 a 57, 81 y 82 fecha muerte, 84 centro
+bd<-renisen2[,-c(26:27,51:73,81,82,84,86)]
+
+bd2<-bd
+
+bd2<-bd2[,c(18:24,55)] 
+
+###########################
+#bd modelo 
+#bd2 modelo medicamentos
+##########################
+bd2$eim_muerte<-as.numeric(bd2$eim_muerte)
+bd2$eim_muerte[as.numeric(bd2$eim_muerte)==1]=0
+bd2$eim_muerte[as.numeric(bd2$eim_muerte)==2]=1
+bd2$eim_muerte<-factor(bd2$eim_muerte)
+#summary(bd2)
+```
+# CON TODOS LOS DATOS REGRESIÓN LOGÍSTICA
+
+Definir el problema: ¿Qué se pretende predecir? ¿De qué datos se dispone? o ¿Qué datos es necesario conseguir?
+
+Explorar y entender los datos que se van a emplear para crear el modelo.
+
+Métrica de existo: definir una forma apropiada de cuantificar cómo de buenos son los resultados obtenidos.
+
+Preparar la estrategia para evaluar el modelo: separar las observaciones en un conjunto de entrenamiento, un conjunto de validación (este último suele ser un subconjunto del de entrenamiento) y un conjunto de test. Ninguna información del conjunto de test debe participar en el proceso de entrenamiento del modelo.
+
+Preprocesar los datos: aplicar las transformaciones necesarias para que los datos puedan ser interpretados por el algoritmo de machine learning seleccionado.
+
+Ajustar un primer modelo capaz de superar unos resultados mínimos. Por ejemplo, en problemas de clasificación, el mínimo a superar es el porcentaje de la clase mayoritaria (la moda).
+
+Gradualmente, mejorar el modelo optimizando sus hiperparámetros.
+
+Evaluar la capacidad del modelo final con el conjunto de test para tener una estimación de la capacidad que tiene el modelo cuando predice nuevas observaciones.
+
+ 
+
+```{r,echo=F,include=F}
+#quitar 26 y 27 fecha y hora
+#dagnosticos 52 a 57
+#81 y 82 fecha muerte
+#84 centro
+head(bd)
+bd$eim_muerte<-as.numeric(bd$eim_muerte)
+bd$eim_muerte[bd$eim_muerte==1]<-0
+bd$eim_muerte[bd$eim_muerte==2]<-1
+bd$eim_muerte<-as.factor(bd$eim_muerte)
+```
+
+Creamos conjuntos test y prueba
+```{r,echo=F}
+
+set.seed(123)
+
+# See the data strcuture 
+glimpse(bd)
+
+datos_div <- initial_split(bd, strata = "eim_muerte", prop = 0.8)
+
+datos_train <- training(datos_div)
+datos_test  <- testing(datos_div)
+
+#comparar porcentajes más o menos ajustados
+prop.table(table(datos_train$eim_muerte))
+prop.table(table(datos_test$eim_muerte))
+```
+
+
+
+1. preparar los datos 
+```{r,echo=F}
+
+#preparar datos 
+transformer <- recipe(
+                  formula = eim_muerte ~ .,
+                  data =  datos_train
+               ) %>%
+               step_naomit(all_predictors()) %>%
+               step_nzv(all_predictors()) %>%
+               step_center(all_numeric(), -all_outcomes()) %>%
+               step_scale(all_numeric(), -all_outcomes()) %>%
+               step_dummy(all_nominal(), -all_outcomes())
+
+transformer_fit <- prep(transformer)
+
+datos_train_prep <- bake(transformer_fit, new_data = datos_train)
+datos_test_prep  <- bake(transformer_fit, new_data = datos_test)
+glimpse(datos_train_prep)
+
+
+#modelo 
+fitted_logistic_model<- logistic_reg() %>%
+        # Set the engine
+        set_engine("glm") %>%
+        # Set the mode
+        set_mode("classification") %>%
+        # Fit the model
+        fit(eim_muerte~., data = datos_train_prep)
+tidy(fitted_logistic_model)
+
+#significativos odds
+tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+
+sig<-tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+paste(c("Los significativos son:",sig[,1][[1]]))
+
+# Class prediction
+pred_class <- predict(fitted_logistic_model,
+                      new_data = datos_test_prep,
+                      type = "class")
+# Prediction Probabilities
+pred_proba <- predict(fitted_logistic_model,
+                      new_data = datos_test_prep,
+                      type = "prob")
+
+pred_proba[1:5,]
+
+#resultados
+results <- datos_test_prep %>%
+  select(eim_muerte) %>%
+  bind_cols(pred_class, pred_proba)
+
+results[1:5, ]
+
+#matriz de confusion
+conf_mat(results, truth = eim_muerte,
+         estimate = .pred_class)
+
+#accuracy
+accuracy(results, truth = eim_muerte,
+         estimate = .pred_class)
+#sensibilidad
+sens(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#especificidad
+spec(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#presición
+# precision(results, truth =  eim_muerte,
+#     estimate = .pred_class)
+
+f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class)
+#kappa
+kap(results, truth =  eim_muerte,
+    estimate = .pred_class)
+
+metricas<-data.frame(rbind(accuracy(results, truth = eim_muerte,
+         estimate = .pred_class),sens(results, truth =  eim_muerte,
+    estimate = .pred_class),spec(results, truth =  eim_muerte,
+    estimate = .pred_class),f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class),kap(results, truth =  eim_muerte,
+    estimate = .pred_class)))
+
+metricas<-metricas[,c(1,3)]
+colnames(metricas)=c("Medida de bondad de ajuste", "estimación")
+metricas
+
+
+#solo significativas
+f <- as.formula(paste("eim_muerte ~",paste(sig[,1][[1]] , collapse = " + ")))
+
+#modelo 
+fitted_logistic_model<- logistic_reg() %>%
+        # Set the engine
+        set_engine("glm") %>%
+        # Set the mode
+        set_mode("classification") %>%
+        # Fit the model
+        fit(f, data = datos_train_prep)
+tidy(fitted_logistic_model)
+
+#significativos odds
+tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+
+sig<-tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+paste(c("Los significativos son:",sig[,1][[1]]))
+
+# Class prediction
+pred_class <- predict(fitted_logistic_model,
+                      new_data = datos_test_prep,
+                      type = "class")
+# Prediction Probabilities
+pred_proba <- predict(fitted_logistic_model,
+                      new_data = datos_test_prep,
+                      type = "prob")
+
+pred_proba[1:5,]
+
+#resultados
+results <- datos_test_prep %>%
+  select(eim_muerte) %>%
+  bind_cols(pred_class, pred_proba)
+
+results[1:5, ]
+
+#matriz de confusion
+conf_mat(results, truth = eim_muerte,
+         estimate = .pred_class)
+
+#accuracy
+accuracy(results, truth = eim_muerte,
+         estimate = .pred_class)
+#sensibilidad
+sens(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#especificidad
+spec(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#presición
+# precision(results, truth =  eim_muerte,
+#     estimate = .pred_class)
+
+f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class)
+#kappa
+kap(results, truth =  eim_muerte,
+    estimate = .pred_class)
+
+metricas<-data.frame(rbind(accuracy(results, truth = eim_muerte,
+         estimate = .pred_class),sens(results, truth =  eim_muerte,
+    estimate = .pred_class),spec(results, truth =  eim_muerte,
+    estimate = .pred_class),f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class),kap(results, truth =  eim_muerte,
+    estimate = .pred_class)))
+
+metricas<-metricas[,c(1,3)]
+colnames(metricas)=c("Medida de bondad de ajuste", "estimación")
+metricas
+
+
+```
+ 
+ 
+ 
+
+<!-- # optimizar el modelo  -->
+
+
+<!-- ```{r,echo=FALSE} -->
+<!-- # # 1. Modelo sin predictores -->
+<!-- # null_model <- glm(eim_muerte ~1, data = datos_train_prep, family = "binomial") -->
+<!-- #      -->
+<!-- # # 2. modelo completo -->
+<!-- # full_model<- glm(eim_muerte ~., data = datos_train_prep, family = "binomial") -->
+<!-- #      -->
+<!-- # # 3. funcion step () -->
+<!-- # step_model <- stats::step(null_model, scope = list(lower = null_model, upper = full_model), direction =  "forward",trace = 0) -->
+<!-- # summary(step_model) -->
+<!-- #  -->
+<!-- #  # estimamos la probabilidad -->
+<!-- # step_prob <- predict(step_model, type = "response") -->
+<!-- #      -->
+<!-- # # Pintamos  ROC of the stepwise model -->
+<!-- #        -->
+<!-- # ROC <- roc(datos_train_prep$eim_muerte, step_prob) -->
+<!-- # plot(ROC, col = "red") -->
+<!-- #          -->
+<!-- # auc(ROC) -->
+<!-- #  -->
+<!-- #  -->
+<!-- #  -->
+<!-- # #enseñamos al modelo para ver las metricas -->
+<!-- # step_model2<- logistic_reg() %>% -->
+<!-- #         # Set the engine -->
+<!-- #         set_engine("glm") %>% -->
+<!-- #         # Set the mode -->
+<!-- #         set_mode("classification") %>% -->
+<!-- #         # Fit the model -->
+<!-- #         fit(step_model$formula, data = datos_train_prep) -->
+<!-- # tidy(step_model2) -->
+<!-- #  -->
+<!-- # #significativos odds -->
+<!-- # tidy(step_model2, exponentiate = TRUE) %>% -->
+<!-- #   filter(p.value < 0.05) -->
+<!-- #  -->
+<!-- # sig<-tidy(step_model2, exponentiate = TRUE) %>% -->
+<!-- #   filter(p.value < 0.05) -->
+<!-- # paste(c("Los significativos son:",sig[,1][[1]])) -->
+<!-- #  -->
+<!-- # # Class prediction -->
+<!-- # pred_class <- predict(step_model2, -->
+<!-- #                       new_data = datos_test_prep, -->
+<!-- #                       type = "class") -->
+<!-- # # Prediction Probabilities -->
+<!-- # pred_proba <- predict(step_model2, -->
+<!-- #                       new_data = datos_test_prep, -->
+<!-- #                       type = "prob") -->
+<!-- #  -->
+<!-- # pred_proba[1:5,] -->
+<!-- #  -->
+<!-- # #resultados -->
+<!-- # results <- datos_test_prep %>% -->
+<!-- #   select(eim_muerte) %>% -->
+<!-- #   bind_cols(pred_class, pred_proba) -->
+<!-- #  -->
+<!-- # results[1:5, ] -->
+<!-- #  -->
+<!-- # #matriz de confusion -->
+<!-- # conf_mat(results, truth = eim_muerte, -->
+<!-- #          estimate = .pred_class) -->
+<!-- #  -->
+<!-- # #accuracy -->
+<!-- # accuracy(results, truth = eim_muerte, -->
+<!-- #          estimate = .pred_class) -->
+<!-- # #sensibilidad -->
+<!-- # sens(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class) -->
+<!-- # #especificidad -->
+<!-- # spec(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class) -->
+<!-- # #presición -->
+<!-- # # precision(results, truth =  eim_muerte, -->
+<!-- # #     estimate = .pred_class) -->
+<!-- #  -->
+<!-- # f_meas(results, truth =  eim_muerte, -->
+<!-- #        estimate = .pred_class) -->
+<!-- # #kappa -->
+<!-- # kap(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class) -->
+<!-- #  -->
+<!-- # metricas<-data.frame(rbind(accuracy(results, truth = eim_muerte, -->
+<!-- #          estimate = .pred_class),sens(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class),spec(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class),f_meas(results, truth =  eim_muerte, -->
+<!-- #        estimate = .pred_class),kap(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class))) -->
+<!-- #  -->
+<!-- # metricas<-metricas[,c(1,3)] -->
+<!-- # colnames(metricas)=c("Medida de bondad de ajuste", "estimación") -->
+<!-- # metricas -->
+<!-- ``` -->
+
+
+
+
+```{r,echo=F}
+save.image(file = "r_parte7todo.RData")
+```

@@ -1,0 +1,378 @@
+---
+title: "acp + regre"
+author: "María Morales Bravo"
+date: "18/8/2021"
+output: pdf_document
+---
+```{r}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+load("r_parte1.RData")
+load("r_parte2.RData")
+load("r_parte3.RData")
+load("r_parte4.RData")
+load("r_parte5.RData")
+load("r_parte6.RData")
+load("r_parte7.RData")
+load("r_parte8.RData")
+```
+
+# ACP 
+
+Analisis de componentes principales previo al modelo. 
+
+Crear primero conjunto de entrenamiento y test: 
+```{r,echo=F}
+set.seed(123)
+
+bd$eim_muerte<-as.numeric(bd$eim_muerte)
+bd$eim_muerte[as.numeric(bd$eim_muerte)==1]=0
+bd$eim_muerte[as.numeric(bd$eim_muerte)==2]=1
+bd$eim_muerte<-factor(bd$eim_muerte)
+#summary(bd)
+
+train <- createDataPartition(y = bd$eim_muerte, p = 0.8, list = FALSE, times = 1)
+datos_train <- bd[train, ]
+#summary(datos_train)
+
+datos_test  <- bd[-train, ]
+datos_test  <-datos_test[complete.cases(datos_test),]
+#summary(datos_test)
+
+prop.table(table(datos_train$eim_muerte))
+prop.table(table(datos_test$eim_muerte))
+
+
+#creacioon k grupos
+grupos<-vfold_cv(datos_train, strata = eim_muerte, v = 8)
+```
+
+
+
+```{r,echo=F}
+#creacion de componentes principales
+library(FactoMineR)
+
+#PCA(data, quali.sup=1, graph=T)
+datos_train_prep2<-datos_train
+for (i in 1:dim(datos_train_prep2)[2]){
+     datos_train_prep2[,i][[1]]<-as.numeric(datos_train_prep2[,i][[1]]) 
+}
+
+pca<-PCA(datos_train_prep2,quali.sup=55,graph=T)
+
+
+summary(pca)
+
+```
+
+## Varianza explicada por las CP: 
+Proporción de varianza explicada
+
+```{r,echo=F}
+#varianza explicada 
+pca$eig
+```
+
+```{r,echo=F}
+library(factoextra)
+
+
+#representación 5 primeras componentes principales
+
+
+#par(mfrow = c(2, 2))
+fviz_pca_ind(pca, geom.ind = "point",
+             col.ind = "#2f876c",
+             axes = c(1, 2),
+             pointsize = 1.5)
+fviz_pca_ind(pca, geom.ind = "point",
+             col.ind = "#2f876c",
+             axes = c(1, 3),
+             pointsize = 1.5)
+fviz_pca_ind(pca, geom.ind = "point",
+             col.ind = "#2f876c",
+             axes = c(1, 4),
+             pointsize = 1.5)
+fviz_pca_ind(pca, geom.ind = "point",
+             col.ind = "#2f876c",
+             axes = c(1, 5),
+             pointsize = 1.5)
+
+# for( i in 2:5){
+#   par(mfrow = c(2, 2))
+#   print(fviz_pca_ind(pca, geom.ind = "point", 
+#              col.ind = "#2f876c", 
+#              axes = c(1, i), 
+#              pointsize = 1.5) )
+# }
+
+par(mfrow = c(1,1))
+
+```
+
+
+```{r,echo=F}
+
+fviz_pca_var(pca, col.var = "cos2",
+             gradient.cols = gradiente(10),
+             geom.var = "arrow", 
+             labelsize = 2, 
+             repel = FALSE)
+
+```
+
+
+Eleccion número de componentes principales
+
+```{r}
+fviz_screeplot(pca, addlabels = TRUE, ylim = c(0, 20),barfill = "#2f876c",barcolor="#2f876c")
+```
+
+
+
+Si contamos con un gran número de variables, podríamos decidir mostrar solo aquellas con mayor contribución.
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 1, top = 10,fill = "#2f876c")
+```
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 2, top = 10,fill = "#2f876c")
+```
+```{r}
+fviz_contrib(pca, choice = "var", axes = 3, top = 10,fill = "#2f876c")
+```
+
+
+```{r}
+fviz_contrib(pca, choice = "var", axes = 4, top = 40,fill = "#2f876c")
+```
+
+
+
+<!-- Para mostrar graficos de 2 opciones -->
+<!-- with(datos.bin, plot(jitter(edad), jitter(uso_int, 0.2), xlab = "Edad", ylab = "Uso de internet", -->
+<!-- cex = 0.4, cex.axis = 0.6, cex.lab = 0.6)) -->
+
+
+
+
+TEORIA
+https://rua.ua.es/dspace/bitstream/10045/72567/3/Analisis-multivariante-FAMD.pdf
+
+
+## AFDM 
+
+Imputar los valores faltantes de un conjunto de datos mixto (con variables continuas y categóricas) utilizando el método del componente principal "análisis factorial para datos mixtos" (FAMD). Se puede utilizar como paso preliminar antes de realizar FAMD en un conjunto de datos incompleto
+
+Tratamiento de datos: 
+```{r,echo=F}
+transformer2 <- recipe(
+                  formula = eim_muerte ~ .,
+                  data =  datos_train
+               ) %>%
+               #step_nzv(all_predictors()) %>%
+               step_dummy(all_nominal(), -all_outcomes())
+
+transformer_fit_fact <- prep(transformer2)
+
+datos_train_prep_fact <- bake(transformer_fit_fact, new_data = datos_train)
+datos_test_prep_fact  <- bake(transformer_fit_fact, new_data = datos_test)
+datos_prep_fact<-rbind(datos_train_prep_fact ,datos_test_prep_fact )
+```
+
+Imputar valores factantes y crear modelo FAMD
+```{r,echo=F}
+library(factoextra)
+#require(missMDA)
+#hacer dos grupos numericas y 0 y 1 cualitativas de los datos ya trabajados
+#res.impute <- imputeFAMD(datos_train) si hubiese datos faltantes 
+res.afdm <- FAMD(datos_prep_fact,tab.disj=res.impute$tab.disj,graph = TRUE)
+
+```
+
+```{r,echo=F}
+#res.afdm <- FAMD(datos_prep_fact,ncp = 99,graph = TRUE)
+#alcanzamos el 85% de varianza explicada con 60 factores
+
+#ncp número de componentes
+res.afdm$eig[,3]
+paste("a partir de la ",which(res.afdm$eig[,3]>50)[1], "se alcanza el 50% de varianza")
+paste("a partir de la ",which(res.afdm$eig[,3]>75)[1], "se alcanza el 75% de varianza")
+
+#decidir hast que varianza coger
+```
+Visualizaciones
+```{r,echo=F}
+#Visualice los valores propios / varianzas.
+get_eigenvalue(res.afdm)
+fviz_eig(res.afdm,choice = "variance", barfill =  "#2f876c")
+
+#Extraiga los resultados para variables cuantitativas y cualitativas.
+#Contributions to the  dimensions
+contrib<-get_famd_var(res.afdm)$contrib
+
+#Visualice los resultados para variables. 
+fviz_famd_var(res.afdm)
+
+
+# Plot of variables
+fviz_famd_var(res.afdm, repel = TRUE)
+
+# Contribution to the first dimension
+fviz_contrib(res.afdm, "var", axes = 1,top=20,fill= "#2f876c")
+
+
+# png("graf0.png",width = 4000, height = 3500, res = 300)
+# fviz_contrib(res.afdm, "var", axes = 1,top=10,fill= "#2f876c") +
+#     theme(text = element_text(size=20),axis.text.x = element_text(size=20))
+# dev.off()
+
+# Contribution to the second dimension
+fviz_contrib(res.afdm, "var", axes = 2,top=20,fill="#2f876c")
+summary(res.afdm)
+
+##VARIABLES CUANTITATIVS
+quanti.var <- get_famd_var(res.afdm, "quanti.var")
+quanti.var 
+
+fviz_famd_var(res.afdm, "quanti.var", col.var = "contrib", 
+             gradient.cols = c("#E15759","#9bd4c2","#2f876c"),
+             repel = TRUE)
+
+# png("graf1.png",width = 4000, height = 3500, res = 300)
+# fviz_famd_var(res.afdm, "quanti.var", col.var = "contrib", 
+#              gradient.cols = c("#E15759","#9bd4c2","#2f876c"),
+#              repel = TRUE) +
+#     theme(text = element_text(size=20))
+#dev.off()
+
+res.afdm$eig[,3]
+
+fviz_famd_var(res.afdm, "quanti.var", col.var = "cos2", 
+             gradient.cols = c("#E15759","#9bd4c2","#2f876c"),
+             repel = TRUE)
+
+
+quali.var <- get_famd_var(res.afdm, "quali.var")
+quali.var 
+
+fviz_famd_var(res.afdm, "quali.var", col.var = "contrib", 
+             gradient.cols = c("#E15759","#9bd4c2","#2f876c")
+             )
+
+# png("graf2.png",width = 4000, height = 3500, res = 300)
+# fviz_famd_var(res.afdm, "quali.var", col.var = "contrib", 
+#              gradient.cols = c("#E15759","#9bd4c2","#2f876c"),
+#              xlim=c(-5,10),ylim=c(-3,8),
+#              alpha.ind = 1,repel = T
+#              )+
+#     theme(text = element_text(size=20))
+# dev.off()
+```
+
+```{r,echo=F}
+#proporcion de varianza 
+PVE<-res.afdm$eig[,2]
+cumsum(PVE)
+par(mfrow = c(1,2))
+
+plot(PVE, type = "o", 
+     ylab = "PVE", 
+     xlab = "Componente principal", 
+     col = "blue")
+plot(cumsum(PVE), type = "o", 
+     ylab = "PVE acumulada", 
+     xlab = "Componente principal", 
+     col = "brown3")
+abline(h=50, lty=2, col="black")
+```
+
+
+# Regresión factores
+
+No se recomienda aplicar primero el pca y luego ejecutar el modelo lineal generalizado. La razón es que el PCA seleccionará la importancia de la variable por la "varianza de la variable" pero no por la "correlación de la variable con el objetivo de la predicción". En otras palabras, la "selección de la variable" puede ser totalmente engañosa, que seleccione variables no importantes.
+
+
+
+```{r,echo=F,include=F}
+###NOTAAS######
+
+
+
+#library(pls)
+#modelo_pcr <- glm(formula = eim_muerte~ ., data = datos_train, scale. = TRUE, ncomp = 70)
+# z1<- res.afdm$eig
+# get_famd_var(res.afdm)$coord[,1]
+# RegCP=glm(eim_muerte~z1+z2+z3+z4+z5+z6+0,data=training)
+
+# data<-data.frame(get_famd_var(res.afdm)$contrib)
+# colnames(data)<- c(paste0("z",1:50))
+
+# RegCP=glm(eim_muerte~z1+z2+z3+z4+z5+z6+0,data=data)
+# summary(RegCP)
+
+# pcr_model <- pcr(as.numeric(eim_muerte)~., data = datos_train_prep, scale = TRUE, validation = "CV",)
+# summary(pcr_model)
+
+# #hacer para comparar cuando los datos esten preparados
+# pcr_model <- pcr(as.numeric(as.character(datos_train_prep$eim_muerte))~., data = datos_train_prep, scale = TRUE, validation = "CV")
+# summary(pcr_model)
+#si hicieramos el analisis pcr con 59 variables se obtiene el 85%
+```
+
+```{r,echo=F}
+save.image(file = "r_parte9.RData")
+```

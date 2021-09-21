@@ -1,0 +1,123 @@
+---
+title: "Anonimización"
+author: "María Morales Bravo"
+date: "25/7/2021"
+output: pdf_document
+---
+
+```{r,include=F}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+load("r_parte1.RData")
+load("r_parte2.RData")
+
+```
+
+## ANONIMIZACIÓN
+
+
+```{r,echo=F,warning=F,fig.show="hold"}
+
+a<-table(renisen2$pac_edad[renisen2$pac_edad<999 & renisen2$pac_sexo<99],renisen2$pac_sexo[renisen2$pac_edad<999& renisen2$pac_sexo<99])
+colnames(a)=c("Hombre","Mujer")
+Tablas(cbind(a[1:47,],rownames(a[48:94,]),a[48:94,]))
+
+renisen2$anonimizacion_edad<-renisen2$pac_edad
+
+
+
+# for(i in 1:length(renisen2$anonimizacion_edad)){
+#   if(renisen2$anonimizacion_edad[i]<10 & renisen2$anonimizacion_edad[i]>0){
+#   renisen2$anonimizacion_edad[i]<-"[1-10)"
+#   }else{renisen2$anonimizacion_edad[i]=as.character(renisen2$anonimizacion_edad[i])}
+#   
+#   if(renisen2$anonimizacion_edad[i]<20 &renisen2$anonimizacion_edad[i]>9){
+#     renisen2$anonimizacion_edad[i]<-"[10-20)"
+#   }else{renisen2$anonimizacion_edad[i]=as.character(renisen2$anonimizacion_edad[i])}
+#   
+#   if(renisen2$anonimizacion_edad[i]<26 &renisen2$anonimizacion_edad[i]>19){
+#     renisen2$anonimizacion_edad[i]<-"[20-25]"
+#   }else{renisen2$anonimizacion_edad[i]=as.character(renisen2$anonimizacion_edad[i])}
+#   
+#   if(renisen2$anonimizacion_edad[i]<105 &renisen2$anonimizacion_edad[i]>97){
+#       renisen2$anonimizacion_edad[i]<-"[98-105]"
+#   }else{renisen2$anonimizacion_edad[i]=as.character(renisen2$anonimizacion_edad[i])}
+# }
+
+renisen2$anonimizacion_edad[as.numeric(renisen2$anonimizacion_edad)<20 & as.numeric(renisen2$anonimizacion_edad)>0]="[1-20)"
+renisen2$anonimizacion_edad[as.numeric(renisen2$anonimizacion_edad)<26 &as.numeric(renisen2$anonimizacion_edad)>19]="[20-26)"
+renisen2$anonimizacion_edad[as.numeric(renisen2$anonimizacion_edad)!=9999 &as.numeric(renisen2$anonimizacion_edad)>94]="[95-105)"
+renisen2$anonimizacion_edad=as.character(renisen2$anonimizacion_edad)
+  
+a<-as.table(as.matrix(table(renisen2$anonimizacion_edad[renisen2$anonimizacion_edad!="9999" & renisen2$pac_sexo<99],renisen2$pac_sexo[renisen2$anonimizacion_edad!="9999" & renisen2$pac_sexo<99])))
+colnames(a)=c("Hombre","Mujer")
+
+#ordenar filas
+a<-rbind(a[-3,],a[3,])
+rownames(a)[dim(a)[1]]="95-105"
+
+a<-rbind(a[3,],a[-3,])
+rownames(a)[1]="0"
+rownames(a)[2]="1-19"
+rownames(a)[3]="20-25"
+
+a<-rbind(a,"")
+Tablas(cbind(a[1:37,],rownames(a[38:74,]),a[38:74,]))
+
+print(paste("k= ",min(as.numeric(a[a[,1]!="",1]),as.numeric(a[a[,2]!="",2]))))
+
+```
+```{r,echo=F}
+save.image(file = "r_parte3.RData")
+```

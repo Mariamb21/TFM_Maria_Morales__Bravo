@@ -1,0 +1,527 @@
+---
+title: "submuestreo clases"
+author: "María Morales Bravo"
+date: "18/8/2021"
+output:
+  html_document:
+    df_print: paged
+---
+```{r}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+library(NeuralNetTools)
+library(ROSE)
+load("r_parte1.RData")
+load("r_parte2.RData")
+load("r_parte3.RData")
+load("r_parte4.RData")
+load("r_parte5.RData")
+load("r_parte6.RData")
+load("r_parte7medicinas.RData")
+load("r_parte7todo.RData")
+```
+
+# SUBMUESTREO PARA DESEQUILIBRIO DE CLASES 
+
+Mejore el rendimiento del modelo en conjuntos de datos desequilibrados mediante submuestreo o sobremuestreo. Este sub o sobremuestreo se soluciona añadiendo más muestras a la clase minoritaria. 
+
+El proceso de submuestreo solo debe aplicarse al conjunto de análisis. El conjunto de evaluación debe reflejar las tasas de eventos vistos "en la naturaleza" y, por esta razón, el skipargumento step_downsample()y otros pasos de recetas de submuestreo tienen un valor predeterminado de TRUE.
+
+<!-- # ```{r,echo=F} -->
+<!-- # recipe_rose<-recipe( -->
+<!-- #                   formula = eim_muerte ~ ., -->
+<!-- #                   data =  datos_train -->
+<!-- #                ) %>% -->
+<!-- #                step_nzv(all_predictors()) %>% -->
+<!-- #                step_center(all_numeric(), -all_outcomes()) %>% -->
+<!-- #                step_scale(all_numeric(), -all_outcomes()) %>% -->
+<!-- #                step_dummy(all_nominal(), -all_outcomes()) %>% -->
+<!-- #                themis::step_rose(eim_muerte)%>% -->
+<!-- #                 recipes::step_naomit(everything(), skip = TRUE) -->
+<!-- #    -->
+<!-- # fglm_fit <-  -->
+<!-- #   logistic_reg() %>%  -->
+<!-- #   set_engine("glm")  -->
+<!-- #  -->
+<!-- #  -->
+<!-- # glmbin_rose_wflw <-  workflow() %>%  -->
+<!-- #   add_model(fglm_fit) %>%  -->
+<!-- #   add_recipe(recipe_rose) -->
+<!-- #  -->
+<!-- # #cv_folds <- vfold_cv(datos_train, strata = "eim_muerte", repeats = 5) -->
+<!-- #  -->
+<!-- #  -->
+<!-- # glmbin_rose_1= fit_resamples(glmbin_rose_wflw, -->
+<!-- # resamples = cv_folds, -->
+<!-- # metrics = metric_set(roc_auc,accuracy,sens, spec), -->
+<!-- # control = control_resamples(save_pred = TRUE) -->
+<!-- #  ) -->
+<!-- #  -->
+<!-- # glmbin_rose_1$.predictions -->
+<!-- #  -->
+<!-- #  -->
+<!-- # glmbin_rose<-rbind(collect_metrics(glmbin_rose_1)) -->
+<!-- # glmbin_rose -->
+<!-- #  -->
+<!-- # # predict_prob<-glmbin_rose_2$.predictions -->
+<!-- # # ROC <- roc(datos_train_prep$eim_muerte, predict_prob) -->
+<!-- # # plot(ROC, col = "red") -->
+<!-- #          -->
+<!-- # #auc(ROC) -->
+<!-- #  -->
+<!-- # ``` -->
+
+
+
+<!-- # Class prediction -->
+<!-- #pred_class <- predict(glmbin_rose_wflw, -->
+<!--                       # new_data = datos_test_prep, -->
+<!--                       # type = "class") -->
+
+<!-- # pred_class <- predict(glmbin_rose_1, -->
+<!-- #                       new_data = datos_test_prep, -->
+<!-- #                       type = "class") -->
+<!-- #  -->
+<!-- # # Prediction Probabilities -->
+<!-- # pred_proba <- predict(glmbin_rose_wflw, -->
+<!-- #                       new_data = datos_test_prep, -->
+<!-- #                       type = "prob") -->
+<!-- #  -->
+<!-- # pred_proba[1:5,] -->
+<!-- #  -->
+<!-- # #resultados -->
+<!-- # results <- datos_test_prep %>% -->
+<!-- #   select(eim_muerte) %>% -->
+<!-- #   bind_cols(pred_class, pred_proba) -->
+<!-- #  -->
+<!-- # results[1:5, ] -->
+<!-- #  -->
+<!-- # #matriz de confusion -->
+<!-- # conf_mat(results, truth = eim_muerte, -->
+<!-- #          estimate = .pred_class) -->
+<!-- #  -->
+<!-- # metricas<-data.frame(rbind(accuracy(results, truth = eim_muerte, -->
+<!-- #          estimate = .pred_class),sens(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class),spec(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class),f_meas(results, truth =  eim_muerte, -->
+<!-- #        estimate = .pred_class),kap(results, truth =  eim_muerte, -->
+<!-- #     estimate = .pred_class))) -->
+
+
+
+
+
+<!-- # Random forest  -->
+<!-- ```{r,echo=F} -->
+<!-- muerte.rf=randomForest(eim_muerte ~ . , data = datos_train_prep ) -->
+<!-- muerte.rf -->
+<!-- plot(muerte.rf) -->
+
+
+<!-- oob.err=double(13) -->
+<!-- test.err=double(13) -->
+
+<!-- ##mtry is no of Variables randomly chosen at each split -->
+<!-- for(mtry in 1:13){ -->
+<!--   rf=randomForest(eim_muerte ~ . , data = datos_train_prep,mtry=mtry,ntree=400)  -->
+<!--   oob.err[mtry] = rf$mse[400]  -->
+
+<!--   pred<-predict(rf,datos_test_prep) #Predictions on Test Set for each Tree -->
+<!--   test.err[mtry]= with(datos_test_prep, mean( (medv - pred)^2)) #Mean Squared Test Error -->
+
+<!--   cat(mtry," ") #printing the output to the console -->
+<!-- } -->
+
+<!-- rf$importance[,1][order(rf$importance[,1],decreasing = T)] -->
+
+<!-- test.err -->
+<!-- oob.err -->
+<!-- matplot(1:mtry , cbind(oob.err,test.err), pch=19 , col=c("red","blue"),type="b",ylab="Mean Squared Error",xlab="Number of Predictors Considered at each Split") -->
+<!-- legend("topright",legend=c("Out of Bag Error","Test Error"),pch=19, col=c("red","blue")) -->
+
+
+
+<!-- ``` -->
+
+
+<!-- ## Ajuste del modelo a través de la vista de cuadrícula  -->
+
+<!-- ```{r} -->
+<!-- glm(eim_muerte ~ ., data = datos_train_prep, family = binomial) -->
+
+<!-- svm_mod <- -->
+<!--   svm_rbf(cost = tune(), rbf_sigma = tune()) %>% -->
+<!--   set_mode("classification") %>% -->
+<!--   set_engine("kernlab") -->
+
+
+<!-- muerte_rec <- -->
+<!--   recipe(eim_muerte ~ ., data = datos_train_prep)  %>% -->
+<!--   # remove any zero variance predictors -->
+<!--   step_zv(all_predictors()) %>%  -->
+<!--   # remove any linear combinations -->
+<!--   step_lincomb(all_numeric()) -->
+
+
+<!-- set.seed(4943) -->
+<!-- muerte_rs <- bootstraps(datos_test_prep, times = 30) -->
+<!-- ctrl <- control_grid(verbose = FALSE, save_pred = TRUE) -->
+<!-- summary(muerte_rs) -->
+
+<!-- roc_vals <- metric_set(roc_auc) -->
+
+<!-- #evitar otros procesos en paralelo -->
+<!-- unregister_dopar <- function() { -->
+<!--   env <- foreach:::.foreachGlobals -->
+<!--   rm(list=ls(name=env), pos=env) -->
+<!-- } -->
+
+<!-- set.seed(35) -->
+<!-- formula_res <- -->
+<!--   svm_mod %>%  -->
+<!--   tune_grid( -->
+<!--     eim_muerte ~ ., -->
+<!--     resamples = muerte_rs, -->
+<!--     metrics = roc_vals, -->
+<!--     control = ctrl -->
+<!--   ) -->
+
+<!-- formula_res -->
+
+
+<!-- formula_res %>%  -->
+<!--   select(.metrics) %>%  -->
+<!--   slice(1) %>%  -->
+<!--   pull(1) -->
+
+<!-- estimates <- collect_metrics(formula_res) -->
+<!-- estimates -->
+
+<!-- show_best(formula_res, metric = "roc_auc") -->
+
+
+<!-- ``` -->
+```{r,echo=F}
+
+rose_train<-ROSE(formula = eim_muerte ~ .,
+                  data =  datos_train_prep,seed=1)$data
+# roseboth<-ovun.sample(formula = eim_muerte ~ .,
+#                   data =  datos_train,method = "both",p=0.5,seed=1)$data
+# 
+# rose <- ROSE(formula = eim_muerte ~ .,data =  datos_train_prep, seed=3)$data
+# rose
+
+rose_test = ROSE(formula = eim_muerte ~ .,data =  datos_test_prep)$data
+#rose_test_valid=rbind(roseN,rose_test)
+#table(rose_test_valid$eim_muerte)
+
+#modelo 
+fitted_logistic_model<- logistic_reg() %>%
+        # Set the engine
+        set_engine("glm") %>%
+        # Set the mode
+        set_mode("classification") %>%
+        # Fit the model
+        fit(eim_muerte~., data = rose_train)
+tidy(fitted_logistic_model)
+
+#significativos odds
+tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+
+sig<-tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+paste(c("Los significativos son:",sig[,1][[1]]))
+
+# Class prediction
+pred_class <- predict(fitted_logistic_model,
+                      new_data = rose_test,
+                      type = "class")
+# Prediction Probabilities
+pred_proba <- predict(fitted_logistic_model,
+                      new_data = rose_test,
+                      type = "prob")
+
+pred_proba[1:5,]
+
+#resultados
+results <- rose_test %>%
+  select(eim_muerte) %>%
+  bind_cols(pred_class, pred_proba)
+
+results[1:5, ]
+
+#matriz de confusion
+conf_mat(results, truth = eim_muerte,
+         estimate = .pred_class)
+
+#accuracy
+accuracy(results, truth = eim_muerte,
+         estimate = .pred_class)
+#sensibilidad
+sens(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#especificidad
+spec(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#presición
+# precision(results, truth =  eim_muerte,
+#     estimate = .pred_class)
+
+f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class)
+#kappa
+kap(results, truth =  eim_muerte,
+    estimate = .pred_class)
+
+metricas<-data.frame(rbind(accuracy(results, truth = eim_muerte,
+         estimate = .pred_class),sens(results, truth =  eim_muerte,
+    estimate = .pred_class),spec(results, truth =  eim_muerte,
+    estimate = .pred_class),f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class),kap(results, truth =  eim_muerte,
+    estimate = .pred_class)))
+
+metricas<-metricas[,c(1,3)]
+colnames(metricas)=c("Medida de bondad de ajuste", "estimación")
+metricas
+
+
+#solo significativas
+f <- as.formula(paste("eim_muerte ~",paste(sig[,1][[1]][-1] , collapse = " + ")))
+
+#modelo 
+fitted_logistic_model<- logistic_reg() %>%
+        # Set the engine
+        set_engine("glm") %>%
+        # Set the mode
+        set_mode("classification") %>%
+        # Fit the model
+        fit(f, data = rose_train)
+tidy(fitted_logistic_model)
+
+#significativos odds
+tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+
+sig<-tidy(fitted_logistic_model, exponentiate = TRUE) %>%
+  filter(p.value < 0.05)
+paste(c("Los significativos son:",sig[,1][[1]]))
+
+# Class prediction
+pred_class <- predict(fitted_logistic_model,
+                      new_data = rose_test,
+                      type = "class")
+# Prediction Probabilities
+pred_proba <- predict(fitted_logistic_model,
+                      new_data = rose_test,
+                      type = "prob")
+
+pred_proba[1:5,]
+
+#resultados
+results <- rose_test %>%
+  select(eim_muerte) %>%
+  bind_cols(pred_class, pred_proba)
+
+results[1:5, ]
+
+#matriz de confusion
+conf_mat(results, truth = eim_muerte,
+         estimate = .pred_class)
+
+#accuracy
+accuracy(results, truth = eim_muerte,
+         estimate = .pred_class)
+#sensibilidad
+sens(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#especificidad
+spec(results, truth =  eim_muerte,
+    estimate = .pred_class)
+#presición
+# precision(results, truth =  eim_muerte,
+#     estimate = .pred_class)
+
+f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class)
+#kappa
+kap(results, truth =  eim_muerte,
+    estimate = .pred_class)
+
+metricas<-data.frame(rbind(accuracy(results, truth = eim_muerte,
+         estimate = .pred_class),sens(results, truth =  eim_muerte,
+    estimate = .pred_class),spec(results, truth =  eim_muerte,
+    estimate = .pred_class),f_meas(results, truth =  eim_muerte,
+       estimate = .pred_class),kap(results, truth =  eim_muerte,
+    estimate = .pred_class)))
+
+metricas<-metricas[,c(1,3)]
+colnames(metricas)=c("Medida de bondad de ajuste", "estimación")
+metricas
+```
+
+Con cross-validacion 5 10 
+```{r,echo=F}
+recipe_rose<-recipe(
+                  formula = eim_muerte ~ .,
+                  data =  rose_train
+               ) %>%
+               # step_nzv(all_predictors()) %>%
+               # step_center(all_numeric(), -all_outcomes()) %>%
+               # step_scale(all_numeric(), -all_outcomes()) %>%
+               # step_dummy(all_nominal(), -all_outcomes()) %>%
+               themis::step_rose(eim_muerte)%>%
+                recipes::step_naomit(everything(), skip = TRUE)
+
+fglm_fit <-
+  logistic_reg() %>%
+  set_engine("glm")
+
+cv_folds <- vfold_cv(rose_train, strata = "eim_muerte", repeats = 5)
+
+glmbin_rose_wflw <-  workflow() %>%
+  add_model(fglm_fit) %>%
+  add_recipe(recipe_rose)
+
+
+glmbin_rose_1=glmbin_rose_wflw%>%
+  fit_resamples(resamples=cv_folds,
+metrics = metric_set(roc_auc,yardstick::accuracy,sens,spec,kap),#,accuracy,sens, spec),
+control = control_resamples(save_pred = TRUE))
+
+
+# glmbin_rose_1= fit_resamples(glmbin_rose_wflw,
+# resamples = cv_folds,
+# metrics = metric_set(roc_auc,accuracy,sens, spec),
+# control = control_resamples(save_pred = TRUE))
+
+
+glmbin_rose<-rbind(collect_metrics(glmbin_rose_1))
+glmbin_rose
+
+mat<-conf_mat_resampled(glmbin_rose_1, parameters = NULL, tidy = F)
+sensibilidad<-mat[[1]][1,1]/(mat[[1]][2,1]+mat[[1]][1,1])
+especificidad <- mat[[1]][2,2]/(mat[[1]][1,2]+mat[[1]][2,2])
+accuracy<-(mat[[1]][2,2]+mat[[1]][1,1])/(mat[[1]][2,2]+mat[[1]][1,1]+mat[[1]][1,2]+mat[[1]][2,1])
+print(paste("la sensibilidad resulta ", sensibilidad, ", la especificidad ",especificidad,"y accuracy",accuracy))
+
+# predict_prob<-glmbin_rose_2$.predictions
+# ROC <- roc(datos_train_prep$eim_muerte, predict_prob)
+# plot(ROC, col = "red")
+# 
+# auc(ROC)
+
+```
+
+
+```{r,echo=F}
+recipe_rose<-recipe(
+                  formula = eim_muerte ~ .,
+                  data =  rose_train
+               ) %>%
+               themis::step_rose(eim_muerte)%>%
+                recipes::step_naomit(everything(), skip = TRUE)
+  
+fglm_fit <- 
+  logistic_reg() %>% 
+  set_engine("glm") 
+
+
+glmbin_rose_wflw <-  workflow() %>% 
+  add_model(fglm_fit) %>% 
+  add_recipe(recipe_rose)
+
+cv_folds <- vfold_cv(rose_train, strata = "eim_muerte", repeats = 5)
+
+summary(glmbin_rose_wflw)
+#doParallel::registerDoParallel()
+
+glmbin_rose_1=glmbin_rose_wflw%>%
+  fit_resamples(resamples=cv_folds,
+metrics = metric_set(roc_auc,yardstick::accuracy,sens,spec,kap),#,accuracy,sens, spec),
+control = control_resamples(save_pred = TRUE))
+
+# glmbin_rose_1= fit_resamples(glmbin_rose_wflw,
+# resamples = cv_folds,
+# metrics = metric_set(roc_auc),
+# control = control_resamples(save_pred = TRUE)
+# )
+# 
+# glmbin_rose_1
+# 
+# glmbin_rose_2= fit_resamples(glmbin_rose_wflw,
+# resamples = cv_folds,
+# metrics = metric_set(accuracy),
+# control = control_resamples(save_pred = TRUE)
+# )
+# 
+# glmbin_rose_2
+
+
+glmbin_rose<-rbind(collect_metrics(glmbin_rose_1))#,collect_metrics(glmbin_rose_2))
+glmbin_rose
+#1-as.numeric(glmbin_rose[2,3])
+# predict_prob<-glmbin_rose_2$.predictions
+# ROC <- roc(datos_train_prep$eim_muerte, predict_prob)
+# plot(ROC, col = "red")
+        
+
+```
+
+
+
+
+
+```{r,echo=F}
+save.image(file = "r_parte8.RData")
+```

@@ -1,0 +1,450 @@
+---
+title: "red regresion"
+author: "María Morales Bravo"
+date: "18/8/2021"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r,include=F,echo=F,warning=F}
+draw_confusion_matrix <- function(cm) {
+  
+  total <- sum(cm$table)
+  res <- as.numeric(cm$table)
+  
+  # Generate color gradients. Palettes come from RColorBrewer.
+  greenPalette <- c("#F7FCF5","#E5F5E0","#C7E9C0","#A1D99B","#74C476","#41AB5D","#238B45","#006D2C","#00441B")
+  redPalette <- c("#FFF5F0","#FEE0D2","#FCBBA1","#FC9272","#FB6A4A","#EF3B2C","#CB181D","#A50F15","#67000D")
+  getColor <- function (greenOrRed = "green", amount = 0) {
+    if (amount == 0)
+      return("#FFFFFF")
+    palette <- greenPalette
+    if (greenOrRed == "red")
+      palette <- redPalette
+    colorRampPalette(palette)(100)[10 + ceiling(90 * amount / total)]
+  }
+  
+  # set the basic layout
+  layout(matrix(c(1,1,2)))
+  par(mar=c(2,2,2,2))
+  plot(c(100, 345), c(300, 450), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
+  title('Matriz de confusión', cex.main=2)
+  
+  # create the matrix 
+  classes = colnames(cm$table)
+  rect(150, 430, 240, 370, col=getColor("green", res[1]))
+  text(195, 435, classes[1], cex=1.2)
+  rect(250, 430, 340, 370, col=getColor("red", res[3]))
+  text(295, 435, classes[2], cex=1.2)
+  text(125, 370, 'Predicted', cex=1.3, srt=90, font=2)
+  text(245, 450, 'Actual', cex=1.3, font=2)
+  rect(150, 305, 240, 365, col=getColor("red", res[2]))
+  rect(250, 305, 340, 365, col=getColor("green", res[4]))
+  text(140, 400, classes[1], cex=1.2, srt=90)
+  text(140, 335, classes[2], cex=1.2, srt=90)
+  
+  # add in the cm results
+  text(195, 400, res[1], cex=1.6, font=2, col='black')
+  text(195, 335, res[2], cex=1.6, font=2, col='black')
+  text(295, 400, res[3], cex=1.6, font=2, col='black')
+  text(295, 335, res[4], cex=1.6, font=2, col='black')
+  
+  # add in the specifics 
+  plot(c(100, 0), c(100, 0), type = "n", xlab="", ylab="", main = "DETAILS", xaxt='n', yaxt='n')
+  text(10, 85, names(cm$byClass[1]), cex=1.2, font=2)
+  text(10, 70, round(as.numeric(cm$byClass[1]), 3), cex=1.2)
+  text(30, 85, names(cm$byClass[2]), cex=1.2, font=2)
+  text(30, 70, round(as.numeric(cm$byClass[2]), 3), cex=1.2)
+  text(50, 85, names(cm$byClass[5]), cex=1.2, font=2)
+  text(50, 70, round(as.numeric(cm$byClass[5]), 3), cex=1.2)
+  text(70, 85, names(cm$byClass[6]), cex=1.2, font=2)
+  text(70, 70, round(as.numeric(cm$byClass[6]), 3), cex=1.2)
+  text(90, 85, names(cm$byClass[7]), cex=1.2, font=2)
+  text(90, 70, round(as.numeric(cm$byClass[7]), 3), cex=1.2)
+  
+  # add in the accuracy information 
+  text(30, 35, names(cm$overall[1]), cex=1.5, font=2)
+  text(30, 20, round(as.numeric(cm$overall[1]), 3), cex=1.4)
+  text(70, 35, names(cm$overall[2]), cex=1.5, font=2)
+  text(70, 20, round(as.numeric(cm$overall[2]), 3), cex=1.4)
+}
+```
+
+```{r,echo=F,include=F}
+library(dplyr)
+library(knitr)
+library(ggplot2)
+library(ggrepel)
+library(magrittr)
+library(readxl)
+library(writexl)
+library(magrittr)
+library(ggplot2)
+
+library(readr)
+library(kableExtra)
+library(flextable)
+library(scales)
+library(arsenal)
+library(tidyr)
+library(listdown)
+library(plotly)
+library(purrr)
+library(gridExtra)
+library(grid)
+#parte7
+library(lmtest)
+library(tidymodels)
+library(vcd)
+library(e1071)
+library(doParallel)
+library(mlbench)
+library(parsnip)
+library(recipes)
+library(tune)
+library(pROC)
+library(stats)
+library(themis)
+library(workflows)
+
+#random forest
+library(randomForest)
+
+
+library(caret)
+library(rsample)
+library(recipes)
+#parte 8 
+library(FactoMineR)
+library(missMDA)
+library(factoextra)
+library("enrichwith")
+library(pls)
+
+#red nueronal 
+library(neuralnet) 
+#library(NeuralNetTools)
+#library(h2o)
+
+#load("r_parte1.RData")
+#load("r_parte2.RData")
+#load("r_parte3.RData")
+#load("r_parte4.RData")
+#load("r_parte5.RData")
+#load("r_parte6.RData")
+#load("r_parte7.RData")
+#load("r_parte8.RData")
+#load("r_parte9.RData")
+load("datos_red.RData")
+```
+
+
+# RED NEURONAL 1 neurona
+<!-- # ```{r red1} -->
+<!-- # nms  <- names(datos_train_prep) -->
+<!-- # frml <- as.formula(paste("eim_muerte ~", paste(nms[!nms %in% "eim_muerte"], collapse = " + "))) -->
+<!-- #   -->
+<!-- # # MODELO -->
+<!-- # # ----------------------------------------------------- -->
+<!-- # modelo.nn <- neuralnet(frml, -->
+<!-- #                        data          = datos_train_prep, -->
+<!-- #                        hidden        = c(1), # ver Notas para detalle  -->
+<!-- #                        threshold     = 0.05   # ver Notas para detalle -->
+<!-- #                        #algorithm     = "rprop+"  -->
+<!-- #                        ) -->
+<!-- #   -->
+<!-- #   -->
+<!-- # # PREDICCION -->
+<!-- # # ----------------------------------------------------- -->
+<!-- # pr.nn   <- compute(modelo.nn,within(datos_test_prep,rm(eim_muerte))) -->
+<!-- #   -->
+<!-- # # se transoforma el valor escalar al valor nominal original -->
+<!-- # muertos.predict <- pr.nn$net.result#*(max(datos$medv)-min(datos$medv))+min(datos$medv) -->
+<!-- # muertos.real    <- (datos_test_prep$eim_muerte)#*(max(datos$medv)-min(datos$medv))+min(datos$medv) -->
+<!-- #   -->
+<!-- #   -->
+<!-- #   -->
+<!-- # # SUMA DE ERROR CUADRATICO -->
+<!-- # # ----------------------------------------------------- -->
+<!-- # (se.nn <- sum((muertos.real - muertos.predict)^2)/nrow(datos_test_prep)) -->
+<!-- #  se.nn -->
+<!-- #   -->
+<!-- # #GRAFICOS -->
+<!-- # # ----------------------------------------------------- -->
+<!-- # # Errores -->
+<!-- # # qplot(x=muertos.real, y=muertos.predict, geom=c("point","smooth"), method="lm",  -->
+<!-- # #       main=paste("Real Vs Prediccion. Summa de Error Cuadratico=", round(se.nn,2))) -->
+<!-- # # Red -->
+<!-- # #plot(modelo.nn,rep="best") -->
+<!-- # ``` -->
+ 
+
+```{r red2}
+# FORMULA
+# -----------------------------------------------------
+
+nms  <- names(datos_train_prep)
+frml <- as.formula(paste("eim_muerte ~", paste(nms[!nms %in% "eim_muerte"], collapse = " + ")))
+ 
+ 
+# MODELO
+# -----------------------------------------------------
+
+modelo.nn2 <- neuralnet(frml,
+                       data          = datos_train_prep,
+                       hidden        = c(2), # ver Notas para detalle 
+                       threshold     = 0.05,   # ver Notas para detalle
+                       algorithm     = "rprop+",
+                       linear.output=F
+                       )
+ 
+round(modelo.nn2$result.matrix,2)
+pesos<-round(modelo.nn2$result.matrix,2)[1:99,]
+names(pesos)[order(pesos, decreasing = T)]
+
+
+#resultados
+nn2.results <- compute(modelo.nn2, datos_test_prep)
+
+#cambiar a numero 
+datos_test_prep$eim_muerte<-as.numeric(datos_test_prep$eim_muerte)
+datos_test_prep$eim_muerte[which(datos_test_prep$eim_muerte==1)]=0
+datos_test_prep$eim_muerte[which(datos_test_prep$eim_muerte==2)]=1
+
+
+#resultados y matriz
+results <- data.frame(actual = as.numeric(datos_test_prep$eim_muerte), prediction = nn2.results$net.result)
+roundedresults<-sapply(results,round,digits=0)
+roundedresultsdf=data.frame(roundedresults)
+attach(roundedresultsdf)
+table(actual,prediction.1)
+table(actual,prediction.2)
+
+
+#representacion: 
+############## matriz
+prediccion<- factor(roundedresultsdf$prediction.2,labels = c("No","Sí"))
+real<-factor(roundedresultsdf$actual,labels = c("No","Sí"))
+cm <- confusionMatrix(data = prediccion, reference = real)
+draw_confusion_matrix(cm)
+
+
+
+
+
+
+#siendo 0 3165 se predicen como 0, 
+# PREDICCION
+# -----------------------------------------------------
+pr.nn2   <- compute(modelo.nn2,within(datos_test_prep,rm(eim_muerte)))
+#pr.nn$net.result
+# se transoforma el valor escalar al valor nominal original
+muerte.predict2 <- pr.nn2$net.result
+#*(max(datos_train_prep$eim_muerte)-min(datos_train_prep$eim_muerte))+min(datos_train_prep$eim_muerte)
+muerte.real    <- (datos_test_prep$eim_muerte)
+muerte.real[which(muerte.real==2)]=1
+muerte.real[which(muerte.real==1)]=0
+#*(max(datos_train_prep$eim_muerte)-min(datos_train_prep$eim_muerte))+min(datos_train_prep$eim_muerte) 
+ 
+ 
+ 
+# SUMA DE ERROR CUADRATICO
+# -----------------------------------------------------
+(se.nn2 <- sum((as.numeric(muerte.real) - as.numeric(muerte.predict2))^2)/nrow(datos_test_prep))
+ 
+ 
+#GRAFICOS
+# -------------------------------------------------
+# Red
+plot(modelo.nn2)
+
+#para bonito
+library(devtools)
+source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update')
+plot.nnet(modelo.nn2,struct = c(2,2))
+#modelo.nn$result.matrix
+
+
+```
+
+
+
+```{r red3}
+# FORMULA
+# -----------------------------------------------------
+
+nms  <- names(datos_train_prep)
+frml <- as.formula(paste("eim_muerte ~", paste(nms[!nms %in% "eim_muerte"], collapse = " + ")))
+ 
+ 
+# MODELO
+# -----------------------------------------------------
+
+modelo.nn3 <- neuralnet(frml,
+                       data          = datos_train_prep,
+                       hidden        = c(3,2), # ver Notas para detalle 
+                       threshold     = 0.05,   # ver Notas para detalle
+                       algorithm     = "rprop+",
+                       linear.output=F
+                       )
+
+round(modelo.nn3$result.matrix,2)
+#resultados
+nn3.results <- compute(modelo.nn3, datos_test_prep)
+
+
+#resultados y matriz
+results <- data.frame(actual = as.numeric(datos_test_prep$eim_muerte), prediction = nn3.results$net.result)
+roundedresults<-sapply(results,round,digits=0)
+roundedresultsdf=data.frame(roundedresults)
+attach(roundedresultsdf)
+table(actual,prediction.1)
+table(actual,prediction.2)
+
+
+#representacion: 
+############## matriz
+prediccion<- factor(roundedresultsdf$prediction.2,labels = c("No","Sí"))
+real<-factor(roundedresultsdf$actual,labels = c("No","Sí"))
+cm <- confusionMatrix(data = prediccion, reference = real)
+draw_confusion_matrix(cm)
+ 
+# PREDICCION
+# -----------------------------------------------------
+pr.nn3   <- compute(modelo.nn3,within(datos_test_prep,rm(eim_muerte)))
+#pr.nn$net.result
+# se transoforma el valor escalar al valor nominal original
+muerte.predict3 <- pr.nn3$net.result
+#*(max(datos_train_prep$eim_muerte)-min(datos_train_prep$eim_muerte))+min(datos_train_prep$eim_muerte)
+muerte.real    <- (datos_test_prep$eim_muerte)
+muerte.real[which(muerte.real==2)]=1
+muerte.real[which(muerte.real==1)]=0
+#*(max(datos_train_prep$eim_muerte)-min(datos_train_prep$eim_muerte))+min(datos_train_prep$eim_muerte) 
+ 
+ 
+ 
+# SUMA DE ERROR CUADRATICO
+# -----------------------------------------------------
+(se.nn3 <- sum((as.numeric(muerte.real) - as.numeric(muerte.predict3))^2)/nrow(datos_test_prep))
+ 
+ 
+#GRAFICOS
+# -------------------------------------------------
+# Red
+plot(modelo.nn3)
+#modelo.nn$result.matrix
+
+
+```
+
+
+
+
+
+```{r red4}
+# FORMULA
+# -----------------------------------------------------
+
+nms  <- names(datos_train_prep)
+frml <- as.formula(paste("eim_muerte ~", paste(nms[!nms %in% "eim_muerte"], collapse = " + ")))
+ 
+ 
+# MODELO
+# -----------------------------------------------------
+
+modelo.nn4 <- neuralnet(frml,
+                       data          = datos_train_prep,
+                       hidden        = c(30,10), # ver Notas para detalle 
+                       threshold     = 0.05,   # ver Notas para detalle
+                       algorithm     = "rprop+",
+                       linear.output=F
+                       )
+round(modelo.nn4$result.matrix,2)
+#resultados
+nn4.results <- compute(modelo.nn4, datos_test_prep)
+
+
+#resultados y matriz
+results <- data.frame(actual = as.numeric(datos_test_prep$eim_muerte), prediction = nn4.results$net.result)
+roundedresults<-sapply(results,round,digits=0)
+roundedresultsdf=data.frame(roundedresults)
+attach(roundedresultsdf)
+table(actual,prediction.1)
+table(actual,prediction.2)
+
+
+#representacion: 
+############## matriz
+prediccion<- factor(roundedresultsdf$prediction.2,labels = c("No","Sí"))
+real<-factor(roundedresultsdf$actual,labels = c("No","Sí"))
+cm <- confusionMatrix(data = prediccion, reference = real)
+draw_confusion_matrix(cm)
+ 
+# PREDICCION
+# -----------------------------------------------------
+pr.nn4   <- compute(modelo.nn4,within(datos_test_prep,rm(eim_muerte)))
+#pr.nn$net.result
+# se transoforma el valor escalar al valor nominal original
+muerte.predict4 <- pr.nn4$net.result
+#*(max(datos_train_prep$eim_muerte)-min(datos_train_prep$eim_muerte))+min(datos_train_prep$eim_muerte)
+muerte.real    <- (datos_test_prep$eim_muerte)
+muerte.real[which(muerte.real==2)]=1
+muerte.real[which(muerte.real==1)]=0
+#*(max(datos_train_prep$eim_muerte)-min(datos_train_prep$eim_muerte))+min(datos_train_prep$eim_muerte) 
+ 
+ 
+ 
+# SUMA DE ERROR CUADRATICO
+# -----------------------------------------------------
+(se.nn4 <- sum((as.numeric(muerte.real) - as.numeric(muerte.predict4))^2)/nrow(datos_test_prep))
+ 
+ 
+#GRAFICOS
+# -------------------------------------------------
+# Red
+plot(modelo.nn4)
+#modelo.nn$result.matrix
+
+
+```
+
+```{r comparacion}
+modelos<-c("2 neuronas","2 capas 3 y 2 neuronas","2 capas 30 y 10 neuronas")
+errores<-c(se.nn2,se.nn3,se.nn4)
+errores2<-data.frame(cbind(modelos,errores))
+errores2
+
+```
+
+```{r,echo=F}
+save.image(file = "r_parte11a.RData")
+```
+
+
+
+<!-- # ```{r} -->
+<!-- # Sys.setenv(JAVA_HOME="C:/Program Files (x86)/jdk-16.0.2") -->
+<!-- # library(h2o) -->
+<!-- # h2o.init(nthreads = -1) -->
+<!-- # h2o.init(nthreads = -1, max_mem_size = '2g', ip = "127.0.0.1", port = 50001) -->
+<!-- # ``` -->
+
+<!-- # ```{r} -->
+<!-- # #una sola neurona con multiples capas  -->
+<!-- # nnclas_model <- nnet(frml, data=datos_train_prep, -->
+<!-- #                      size = 4, decay = 0.0001, maxit = 500) #decay limita los pesos altos y maxit hace que pare el algoritmo -->
+<!-- #  -->
+<!-- #  -->
+<!-- # x <- datos_train_prep[, c(1:8,10:99)] -->
+<!-- # y <- datos_train_prep[, 9] -->
+<!-- # y<-as.numeric(y[[1]]) -->
+<!-- # y[y==1]=0 -->
+<!-- # y[y==2]=1 -->
+<!-- # y<-as.factor(y) -->
+<!-- # yhat <- predict(nnclas_model, x, type = 'class') -->
+<!-- # confusionMatrix(as.factor(yhat), y) -->
+<!-- # ``` -->
+
+
